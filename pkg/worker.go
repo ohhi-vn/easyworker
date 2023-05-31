@@ -35,7 +35,7 @@ func Hello() {
 func runWorker(opts *worker) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("worker", opts.id, " was panic, ", r)
+			fmt.Println(opts.id, ", worker was panic, ", r)
 			opts.result <- msg{workerId: opts.id, msgType: ERROR, data: r}
 		}
 	}()
@@ -48,14 +48,32 @@ func runWorker(opts *worker) {
 		switch task.msgType {
 		case RUN:
 			args := task.data.([]interface{})
-			r, e := InvokeFun(opts.fun, args...)
-			fmt.Println("result: ", r, ", error: ", e)
+			i := 0
+			for ; i <= opts.retryTime; i++ {
+				if i > 0 {
+					fmt.Println(opts.id, ", retry(", i, ") function with last args")
+				}
+				r, e := InvokeFun(opts.fun, args...)
+				if e != nil {
+					fmt.Println(opts.id, ", call function failed, error: ", e)
+				} else {
+
+					fmt.Println(opts.id, ", function return ", r)
+				}
+			}
 
 		}
 	}
 }
 
-func InvokeFun(fun interface{}, args ...interface{}) (reflect.Value, error) {
+func InvokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("call function failed, ", r)
+			err = fmt.Errorf("call function failed, %s", r)
+		}
+	}()
+
 	fmt.Println("list args: ", args)
 	if v := reflect.ValueOf(fun); v.Kind() != reflect.Func {
 		return reflect.ValueOf(nil), fmt.Errorf("you need give a real function")
@@ -88,7 +106,9 @@ func InvokeFun(fun interface{}, args ...interface{}) (reflect.Value, error) {
 			return reflect.ValueOf(nil), fmt.Errorf("method Param[%d] must be %s. Have %s", i, inType, argType)
 		}
 	}
-	return fn.Call(in)[0], nil
+
+	ret = fn.Call(in)[0]
+	return ret, nil
 }
 
 func verifyFunc(fun interface{}) error {
