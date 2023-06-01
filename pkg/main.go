@@ -1,11 +1,19 @@
-package main
+package easyworker
 
 import (
 	"fmt"
 	"time"
 )
 
-func main() {
+func FullTest() {
+
+	fn3 := func(a ...int) int {
+		sum := 0
+		for _, i := range a {
+			sum += i
+		}
+		return sum
+	}
 
 	fn := func(a int, b int) int {
 		if a%3 == 0 {
@@ -21,14 +29,14 @@ func main() {
 		return fmt.Sprintf("%d_%s", a, suffix)
 	}
 
-	eWorker, err := NewEasyWorker(fn2, 2, 1)
+	eWorker, err := NewEasyWorker(fn3, 3, 1)
 	if err != nil {
 		fmt.Println("cannot create EasyWorker, ", err)
 		return
 	}
 
-	eWorker.AddParams(1, "tested")
-	eWorker.AddParams(3, "ok")
+	eWorker.AddParams(1, 2, 3)
+	eWorker.AddParams(3, 4, 5, 6, 7)
 
 	r, e := eWorker.Run()
 	if e != nil {

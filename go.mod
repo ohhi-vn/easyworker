@@ -1,3 +1,3 @@
-module github.com/manhvu/easy_worker
+module github.com/manhvu/easyworker
 
 go 1.20
