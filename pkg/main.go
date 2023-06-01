@@ -6,35 +6,75 @@ import (
 )
 
 func main() {
+
 	fn := func(a int, b int) int {
 		if a%3 == 0 {
-			panic("test panic")
+			panic("panic from user func")
 		}
 		return a + b
 	}
-	fn2 := func(a int, b string) string {
-		if a%3 == 10 {
-			panic("test panic")
+
+	fn2 := func(a int, suffix string) string {
+		if a%3 == 0 {
+			panic("panic from user func")
 		}
-		return fmt.Sprintf("%d <> %s", a, b)
+		return fmt.Sprintf("%d_%s", a, suffix)
 	}
 
-	inputs := make([][]int, 0)
-	inputs = append(inputs, []int{1, 2})
-	inputs = append(inputs, []int{3, 4})
+	eWorker, err := NewEasyWorker(fn2, 2, 1)
+	if err != nil {
+		fmt.Println("cannot create EasyWorker, ", err)
+		return
+	}
 
-	StartSuper(inputs, fn, 1, 1)
+	eWorker.AddParams(1, "tested")
+	eWorker.AddParams(3, "ok")
 
-	inCh := make(chan []interface{})
-	outCh := make(chan []interface{})
+	r, e := eWorker.Run()
+	if e != nil {
+		fmt.Println("run task failed, ", e)
+	} else {
+		fmt.Println("task result:", r)
+	}
+
+	eWorker, err = NewEasyWorker(fn, 1, 0)
+	if err != nil {
+		fmt.Println("cannot create EasyWorker, ", err)
+		return
+	}
+
+	for i := 1; i <= 5; i++ {
+		eWorker.AddParams(i, i)
+	}
+	r, e = eWorker.Run()
+	if e != nil {
+		fmt.Println("run task failed, ", e)
+	} else {
+		fmt.Println("task result:", r)
+	}
+
+	inCh := make(chan []interface{}, 1)
+	outCh := make(chan interface{})
+
+	time.Sleep(time.Millisecond)
 
 	// test with stream.
-	StartSuperStream(inCh, outCh, fn2, 2, 3)
+	eWorker, err = NewEasyWorkerStream(inCh, outCh, fn2, 2, 1)
+	if err != nil {
+		fmt.Println("create EasyWorker failed, ", err)
+	}
+
+	e = eWorker.RunStream()
+	if e != nil {
+		fmt.Println("run stream task failed, ", e)
+	} else {
+		fmt.Println("stream is running")
+	}
 
 	go func() {
 		for {
 			r := <-outCh
-			fmt.Println("result: ", r)
+			fmt.Println("stream result: ", r)
 		}
 	}()
 
@@ -42,10 +82,15 @@ func main() {
 		for i := 0; i < 15; i++ {
 			input := []interface{}{i, "3"}
 			inCh <- input
-			fmt.Println("sent: ", input)
+			fmt.Println("stream sent: ", input)
 
 		}
 	}()
 
 	time.Sleep(2 * time.Second)
+
+	fmt.Println("send stop signal to stream")
+	eWorker.StopStream()
+
+	time.Sleep(time.Second)
 }

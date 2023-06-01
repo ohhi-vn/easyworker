@@ -6,66 +6,105 @@ import (
 )
 
 const (
-	ERROR = iota
+	STREAM = -1
+	ERROR  = iota
+	FATAL_ERROR
 	SUCCESS
 	RETRY
 	CANCEL
 	RUN
+	QUIT
+	TASK
 )
 
+// struct carry task/command for worker.
 type msg struct {
-	workerId int
-	msgType  int
-	data     interface{}
+	id      int
+	msgType int
+	data    interface{}
 }
 
+// worker's information.
 type worker struct {
-	id        int
-	isDone    bool
+	// worker's id
+	id int
+
+	// retry time, define by user.
 	retryTime int
-	fun       interface{}
-	cmd       chan msg
-	result    chan msg
+
+	// function, define by user.
+	fun interface{}
+
+	// command channel, supervisor uses to send command to worker.
+	cmd chan msg
+
+	// input channel, worker receives task (params) then run with fun.
+	inputCh chan msg
+
+	// output channel, worker send back result to supervisor.
+	resultCh chan msg
 }
 
-func Hello() {
-	fmt.Println("test")
-}
-
-func runWorker(opts *worker) {
+/*
+start worker with options in struct.
+after start worker will wait task from supervisor.
+after task done, worker will send result back to supervisor with id of task.
+*/
+func (opts *worker) run() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println(opts.id, ", worker was panic, ", r)
-			opts.result <- msg{workerId: opts.id, msgType: ERROR, data: r}
+			opts.resultCh <- msg{id: opts.id, msgType: FATAL_ERROR, data: r}
 		}
 	}()
 
-	for {
-		task := <-opts.cmd
+	var (
+		task msg
+		ret  reflect.Value
+		err  error
+	)
 
-		fmt.Println(opts.id, ", received new task, ", task)
+	for {
+		select {
+		case task = <-opts.inputCh:
+		case cmd := <-opts.cmd:
+			// receive a quit signal.
+			if cmd.msgType == QUIT {
+				fmt.Println(opts.id, "is exited")
+				return
+			}
+		}
+
+		fmt.Println(opts.id, ", received new task, ", task, "data:", task.data)
 
 		switch task.msgType {
-		case RUN:
+		case TASK:
 			args := task.data.([]interface{})
 			i := 0
 			for ; i <= opts.retryTime; i++ {
 				if i > 0 {
 					fmt.Println(opts.id, ", retry(", i, ") function with last args")
 				}
-				r, e := InvokeFun(opts.fun, args...)
-				if e != nil {
-					fmt.Println(opts.id, ", call function failed, error: ", e)
-				} else {
-
-					fmt.Println(opts.id, ", function return ", r)
+				ret, err = InvokeFun(opts.fun, args...)
+				if err == nil {
+					break
 				}
 			}
 
+			if err != nil {
+				fmt.Println(opts.id, ", call function failed, error: ", err)
+				opts.resultCh <- msg{id: task.id, msgType: ERROR, data: err}
+			} else {
+				fmt.Println(opts.id, ", function return ", ret)
+				opts.resultCh <- msg{id: task.id, msgType: SUCCESS, data: ret}
+			}
 		}
 	}
 }
 
+/*
+call user's function througth reflect.
+*/
 func InvokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -75,9 +114,7 @@ func InvokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err err
 	}()
 
 	fmt.Println("list args: ", args)
-	if v := reflect.ValueOf(fun); v.Kind() != reflect.Func {
-		return reflect.ValueOf(nil), fmt.Errorf("you need give a real function")
-	}
+
 	fn := reflect.ValueOf(fun)
 	fnType := fn.Type()
 	numIn := fnType.NumIn()
@@ -108,9 +145,14 @@ func InvokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err err
 	}
 
 	ret = fn.Call(in)[0]
+
 	return ret, nil
 }
 
+/*
+verify if interface is a function.
+if interface is not a function, it will return an error.
+*/
 func verifyFunc(fun interface{}) error {
 	if v := reflect.ValueOf(fun); v.Kind() != reflect.Func {
 		return fmt.Errorf("you need give a real function")
