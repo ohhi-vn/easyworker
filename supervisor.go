@@ -19,27 +19,32 @@ var (
 EasyWorker is supervisor struct.
 It's store options that input by user.
 */
-type EasyWorker struct {
+type supConfig struct {
 	// id of supervisor.
 	id int
 
-	// type of task: stream or existed tasks
-	typeTask int
-
 	// fun stores function add by user.
 	fun interface{}
-
-	// task for worker. It's slice of slice of params.
-	inputs [][]interface{}
 
 	// number of workers (goroutines)
 	numWorker int
 
 	// retry times, if function was failed, worker will try again.
 	numRetry int
+}
+
+type EasyTask struct {
+	config supConfig
+
+	// task for worker. It's slice of slice of params.
+	inputs [][]interface{}
 
 	// store runtime workers.
 	workerList map[int]*worker
+}
+
+type EasyStream struct {
+	config supConfig
 
 	// inputs channel
 	inputCh chan []interface{}
@@ -49,6 +54,9 @@ type EasyWorker struct {
 
 	// cmd channel for supervisor
 	cmdCh chan int
+
+	// store runtime workers.
+	workerList map[int]*worker
 }
 
 /*
@@ -65,7 +73,7 @@ Example:
 
 	workers := NewEasyWoker(fn, 3, 0)
 */
-func NewEasyWorker(fun interface{}, numWorker int, numRetry int) (ret EasyWorker, err error) {
+func NewTask(fun interface{}, numWorker int, numRetry int) (ret EasyTask, err error) {
 	if err = verifyFunc(fun); err != nil {
 		err = fmt.Errorf("not a function, you need give a real function")
 		return
@@ -76,7 +84,7 @@ func NewEasyWorker(fun interface{}, numWorker int, numRetry int) (ret EasyWorker
 		return
 	}
 
-	if numWorker < 0 {
+	if numRetry < 0 {
 		err = fmt.Errorf("number of retry times is incorrect, %d", numWorker)
 		return
 	}
@@ -84,20 +92,23 @@ func NewEasyWorker(fun interface{}, numWorker int, numRetry int) (ret EasyWorker
 	// auto incremental number, get supervisor's id/
 	superLastId++
 
-	ret = EasyWorker{
-		id:         superLastId,
-		typeTask:   TASK_LIST,
-		fun:        fun,
+	cfg := supConfig{
+		id:        superLastId,
+		fun:       fun,
+		numWorker: numWorker,
+		numRetry:  numRetry,
+	}
+
+	ret = EasyTask{
+		config:     cfg,
 		inputs:     make([][]interface{}, 0),
-		numWorker:  numWorker,
-		numRetry:   numRetry,
 		workerList: make(map[int]*worker, numWorker),
 	}
 
 	return
 }
 
-func NewEasyWorkerStream(taskCh chan []interface{}, resultCh chan interface{}, fun interface{}, numWorker int, numRetry int) (ret EasyWorker, err error) {
+func NewStream(taskCh chan []interface{}, resultCh chan interface{}, fun interface{}, numWorker int, numRetry int) (ret EasyStream, err error) {
 	if err = verifyFunc(fun); err != nil {
 		err = fmt.Errorf("not a function, you need give a real function")
 		return
@@ -116,16 +127,18 @@ func NewEasyWorkerStream(taskCh chan []interface{}, resultCh chan interface{}, f
 	// auto incremental number, get supervisor's id/
 	superLastId++
 
-	ret = EasyWorker{
-		id:         superLastId,
-		typeTask:   TASK_STREAM,
-		fun:        fun,
-		inputs:     make([][]interface{}, 0),
-		numWorker:  numWorker,
-		numRetry:   numRetry,
-		workerList: make(map[int]*worker, numWorker),
+	cfg := supConfig{
+		id:        superLastId,
+		fun:       fun,
+		numWorker: numWorker,
+		numRetry:  numRetry,
+	}
+
+	ret = EasyStream{
+		config:     cfg,
 		inputCh:    taskCh,
 		outputCh:   resultCh,
+		workerList: make(map[int]*worker, numWorker),
 	}
 
 	return
@@ -140,7 +153,7 @@ Example:
 	workers.AddParams(2, "user")
 	workers.AddParams(1000, "admin")
 */
-func (p *EasyWorker) AddParams(i ...interface{}) {
+func (p *EasyTask) AddTask(i ...interface{}) {
 	params := make([]interface{}, 0)
 	params = append(params, i...)
 
@@ -154,7 +167,7 @@ Example:
 
 	workers.Run()
 */
-func (p *EasyWorker) Run() (ret []interface{}, retErr error) {
+func (p *EasyTask) Run() (ret []interface{}, retErr error) {
 	ret = make([]interface{}, 0)
 
 	fmt.Println("len:", len(p.inputs))
@@ -166,20 +179,20 @@ func (p *EasyWorker) Run() (ret []interface{}, retErr error) {
 	}
 
 	// use for send function's params to worker.
-	inputCh := make(chan msg, p.numWorker)
+	inputCh := make(chan msg, p.config.numWorker)
 
 	// use for get result from worker.
-	resultCh := make(chan msg, p.numWorker)
+	resultCh := make(chan msg, p.config.numWorker)
 
 	// Start workers
-	for i := 0; i < p.numWorker; i++ {
+	for i := 0; i < p.config.numWorker; i++ {
 		opt := &worker{
 			id:        i,
-			fun:       p.fun,
+			fun:       p.config.fun,
 			cmd:       make(chan msg),
 			resultCh:  resultCh,
 			inputCh:   inputCh,
-			retryTime: p.numRetry,
+			retryTime: p.config.numRetry,
 		}
 		p.workerList[i] = opt
 
@@ -243,27 +256,24 @@ Example:
 
 	workers.Run()
 */
-func (p *EasyWorker) RunStream() (retErr error) {
-	fmt.Println("len:", len(p.inputs))
-	fmt.Println("inputs: ", p.inputs)
-
+func (p *EasyStream) Run() (retErr error) {
 	// use for send function's params to worker.
-	inputCh := make(chan msg, p.numWorker)
+	inputCh := make(chan msg, p.config.numWorker)
 
 	// use for get result from worker.
-	resultCh := make(chan msg, p.numWorker)
+	resultCh := make(chan msg, p.config.numWorker)
 
 	p.cmdCh = make(chan int)
 
 	// Start workers
-	for i := 0; i < p.numWorker; i++ {
+	for i := 0; i < p.config.numWorker; i++ {
 		opt := &worker{
 			id:        i,
-			fun:       p.fun,
+			fun:       p.config.fun,
 			cmd:       make(chan msg),
 			resultCh:  resultCh,
 			inputCh:   inputCh,
-			retryTime: p.numRetry,
+			retryTime: p.config.numRetry,
 		}
 		p.workerList[i] = opt
 
@@ -315,7 +325,7 @@ func (p *EasyWorker) RunStream() (retErr error) {
 	return
 }
 
-func (p *EasyWorker) StopStream() error {
+func (p *EasyStream) StopStream() error {
 	if p.cmdCh != nil {
 		p.cmdCh <- QUIT
 		return nil
