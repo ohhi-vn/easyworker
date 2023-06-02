@@ -11,9 +11,15 @@ The package has two main part:
 * The supervisor: Manage worker, give a task to worker & collect result.
 * The worker: Receive task, run task then send result to supervisor.
 
-```mermain
+## Supervisor
 
-```
+Start worker and moniter worker.
+Send task to worker and get result.
+
+## Worker
+
+Run task with user's function and handle error.
+If user's function panic worker will check retry config and re-run if needed.
 
 # Guide
 
@@ -24,7 +30,14 @@ easywork support 2 type of worker:
 
 ## EasyTask
 
+This is simple way to run parallel task.
+User doesn't to manage goroutine, channel,...
 
+## EasyStream
+
+This is used for streaming type.
+In this case, tasks are continuously send to worker by user's channel.
+Results will receive from other channle of user.
 
 # Example
 
@@ -39,17 +52,23 @@ fnSum = func(a ...int) int {
 	return sum
 }
 
-task, err := NewTask(fnSum, 3, 1)
+numWorkers := 3
+retryTimes := 0
+retrySleep := 0
+
+config, _ := NewConfig(fnSum, numWorkers, retryTimes, retrySleep)
+
+task, err := NewTask(config)
 
 if err != nil {
     t.Error("cannot create task, ", err)
     return
 }
 
-task.AddTask(1, 2, 3)
-task.AddTask(3, 4, 5, 6, 7)
+myTask.AddTask(1, 2, 3)
+myTask.AddTask(3, 4, 5, 6, 7)
 
-r, e := eWorker.Run()
+r, e := myTask.Run()
 if e != nil {
     t.Error("run task failed, ", e)
 } else {
@@ -70,15 +89,16 @@ fnStr = func (a int, suffix string) string {
 inCh := make(chan []interface{}, 1)
 outCh := make(chan interface{})
 
-time.Sleep(time.Millisecond)
+// number of workers = number of cpu cores (logical cores)
+config, _ := NewConfig(fnSum, DefaultNumWorker(), 3, 1000)
 
 // test with stream.
-eWorker, err := NewStream(inCh, outCh, fnStr, 2, 1)
+myStream, err := NewStream(config, inCh, outCh)
 if err != nil {
     t.Error("create EasyWorker failed, ", err)
 }
 
-e := eWorker.Run()
+e := myStream.Run()
 if e != nil {
     t.Error("run stream task failed, ", e)
 } else {
@@ -103,6 +123,6 @@ go func() {
 
 time.Sleep(2 * time.Second)
 
-fmt.Println("send stop signal to stream")
-eWorker.StopStream()
+// Stop all worker
+myStream.Stop()
 ```

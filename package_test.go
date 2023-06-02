@@ -25,6 +25,11 @@ func Sum(a ...int) int {
 	return sum
 }
 
+func defaultConfig(fun interface{}) Config {
+	config, _ := NewConfig(fun, 1, 0, 0)
+	return config
+}
+
 func StrId(a int, suffix string) string {
 	if a%3 == 0 {
 		panic("panic from user func")
@@ -33,61 +38,32 @@ func StrId(a int, suffix string) string {
 }
 
 func TestIsNotFunc(t *testing.T) {
-	_, err := NewTask("fn", 1, 0)
+	_, err := NewConfig("fun", 1, 0, 0)
+
 	if err == nil {
 		t.Error("missed check function, ", err)
 	}
 }
 
 func TestIncorrectNumWorker(t *testing.T) {
-	_, err := NewTask(Add, 0, 0)
+	_, err := NewConfig(Add, 0, 0, 0)
+
 	if err == nil {
 		t.Error("incorrect number of worker is passed, ", err)
 	}
 }
 
 func TestIncorrectNumRetry(t *testing.T) {
-	_, err := NewTask(Add, 1, -1)
-	if err == nil {
-		t.Error("incorrect number of retry is passed, ", err)
-	}
-}
-
-func TestIsNotFuncStream(t *testing.T) {
-	inCh := make(chan []interface{}, 1)
-	outCh := make(chan interface{})
-
-	// test with stream.
-	_, err := NewStream(inCh, outCh, []int{1, 3}, 2, 1)
-	if err == nil {
-		t.Error("missed check function, ", err)
-	}
-}
-
-func TestIncorrectNumWorkerStream(t *testing.T) {
-	inCh := make(chan []interface{}, 1)
-	outCh := make(chan interface{})
-
-	// test with stream.
-	_, err := NewStream(inCh, outCh, Add, -2, 0)
-	if err == nil {
-		t.Error("incorrect number of worker is passed, ", err)
-	}
-}
-
-func TestIncorrectNumRetryStream(t *testing.T) {
-	inCh := make(chan []interface{}, 1)
-	outCh := make(chan interface{})
-
-	// test with stream.
-	_, err := NewStream(inCh, outCh, Add, 2, -1)
+	_, err := NewConfig(Add, 0, -1, 0)
 	if err == nil {
 		t.Error("incorrect number of retry is passed, ", err)
 	}
 }
 
 func TestNoTask(t *testing.T) {
-	eWorker, _ := NewTask(Add, 0, 0)
+	config := defaultConfig(Add)
+
+	eWorker, _ := NewTask(config)
 
 	_, e := eWorker.Run()
 	if e == nil {
@@ -96,7 +72,7 @@ func TestNoTask(t *testing.T) {
 }
 
 func TestTaskList1(t *testing.T) {
-	eWorker, err := NewTask(AddWithPanic, 1, 0)
+	eWorker, err := NewTask(defaultConfig(AddWithPanic))
 	if err != nil {
 		t.Error("cannot create EasyWorker, ", err)
 		return
@@ -114,7 +90,7 @@ func TestTaskList1(t *testing.T) {
 }
 
 func TestTaskList2(t *testing.T) {
-	eWorker, err := NewTask(Sum, 3, 1)
+	eWorker, err := NewTask(defaultConfig(Sum))
 	if err != nil {
 		t.Error("cannot create EasyWorker, ", err)
 		return
@@ -137,12 +113,12 @@ func TestStreamStopWithOutRun(t *testing.T) {
 	outCh := make(chan interface{})
 
 	// test with stream.
-	eWorker, err := NewStream(inCh, outCh, StrId, 2, 1)
+	eWorker, err := NewStream(defaultConfig(StrId), inCh, outCh)
 	if err != nil {
 		t.Error("create EasyWorker failed, ", err)
 	}
 
-	err = eWorker.StopStream()
+	err = eWorker.Stop()
 	if err == nil {
 		t.Error("StopStream malfunction")
 	}
@@ -155,7 +131,7 @@ func TestStream(t *testing.T) {
 	time.Sleep(time.Millisecond)
 
 	// test with stream.
-	eWorker, err := NewStream(inCh, outCh, StrId, 2, 1)
+	eWorker, err := NewStream(defaultConfig(StrId), inCh, outCh)
 	if err != nil {
 		t.Error("create EasyWorker failed, ", err)
 	}
@@ -186,7 +162,7 @@ func TestStream(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	fmt.Println("send stop signal to stream")
-	eWorker.StopStream()
+	eWorker.Stop()
 
 	time.Sleep(time.Second)
 }

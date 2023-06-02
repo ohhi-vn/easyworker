@@ -5,21 +5,16 @@ import (
 	"fmt"
 )
 
-const (
-	TASK_STREAM = iota
-	TASK_LIST
-)
-
 var (
 	// use to store last id of supervisor. id is auto_increment.
 	superLastId int
 )
 
 /*
-EasyWorker is supervisor struct.
+Config is shared between EasyTask & EasyStream struct.
 It's store options that input by user.
 */
-type supConfig struct {
+type Config struct {
 	// id of supervisor.
 	id int
 
@@ -27,14 +22,22 @@ type supConfig struct {
 	fun interface{}
 
 	// number of workers (goroutines)
-	numWorker int
+	worker int
 
 	// retry times, if function was failed, worker will try again.
-	numRetry int
+	retry int
+
+	// sleep time before rerun
+	retrySleep int
 }
 
+/*
+Store options and runtime data for task processing.
+Also, struct provides interface for control and processing task.
+*/
 type EasyTask struct {
-	config supConfig
+	// config input by user.
+	config Config
 
 	// task for worker. It's slice of slice of params.
 	inputs [][]interface{}
@@ -43,16 +46,21 @@ type EasyTask struct {
 	workerList map[int]*worker
 }
 
+/*
+Store options and runtime data for stream processing.
+Also, struct provides interface for control and processing task.
+*/
 type EasyStream struct {
-	config supConfig
+	// config input by user.
+	config Config
 
-	// inputs channel
+	// inputs channel.
 	inputCh chan []interface{}
 
-	// output channel
+	// output channel.
 	outputCh chan interface{}
 
-	// cmd channel for supervisor
+	// cmd channel for supervisor.
 	cmdCh chan int
 
 	// store runtime workers.
@@ -60,92 +68,99 @@ type EasyStream struct {
 }
 
 /*
-Make new EasyWorker.
+Make a configuration holder for EasyTask or EasyStream.
 fun: This is func you need to run task.
-numWorker: Number of goroutine you want to run task.
-numRetry: Number of retry if func is failed.
+numWorkers: Number of goroutine you want to run task.
+retryTimes: Number of retry if func is failed.
 
 Example:
 
 	fn = func(n int, prefix string) string {
-	return fmt.Sprintf("%s_%d", prefix, n)
+		return fmt.Sprintf("%s_%d", prefix, n)
 	}
 
-	workers := NewEasyWoker(fn, 3, 0)
+	config,_ := NewConfig(fn, 3, 0, 0)
 */
-func NewTask(fun interface{}, numWorker int, numRetry int) (ret EasyTask, err error) {
+func NewConfig(fun interface{}, numWorkers int, retryTimes int, retrySleep int) (ret Config, err error) {
 	if err = verifyFunc(fun); err != nil {
 		err = fmt.Errorf("not a function, you need give a real function")
 		return
 	}
 
-	if numWorker < 1 {
-		err = fmt.Errorf("number of workers is incorrect, %d", numWorker)
+	if numWorkers < 1 {
+		err = fmt.Errorf("number of workers is incorrect, %d", numWorkers)
 		return
 	}
 
-	if numRetry < 0 {
-		err = fmt.Errorf("number of retry times is incorrect, %d", numWorker)
+	if retryTimes < 0 {
+		err = fmt.Errorf("retryTimes is incorrect, %d", numWorkers)
 		return
 	}
 
-	// auto incremental number, get supervisor's id/
-	superLastId++
-
-	cfg := supConfig{
-		id:        superLastId,
-		fun:       fun,
-		numWorker: numWorker,
-		numRetry:  numRetry,
-	}
-
-	ret = EasyTask{
-		config:     cfg,
-		inputs:     make([][]interface{}, 0),
-		workerList: make(map[int]*worker, numWorker),
-	}
-
-	return
-}
-
-func NewStream(taskCh chan []interface{}, resultCh chan interface{}, fun interface{}, numWorker int, numRetry int) (ret EasyStream, err error) {
-	if err = verifyFunc(fun); err != nil {
-		err = fmt.Errorf("not a function, you need give a real function")
+	if retryTimes > 0 && retrySleep < 0 {
+		err = fmt.Errorf("retrySleep is incorrect, %d", numWorkers)
 		return
 	}
 
-	if numWorker < 1 {
-		err = fmt.Errorf("number of workers is incorrect, %d", numWorker)
-		return
-	}
-
-	if numWorker < 0 {
-		err = fmt.Errorf("number of retry times is incorrect, %d", numWorker)
-		return
-	}
-
-	// auto incremental number, get supervisor's id/
-	superLastId++
-
-	cfg := supConfig{
-		id:        superLastId,
-		fun:       fun,
-		numWorker: numWorker,
-		numRetry:  numRetry,
-	}
-
-	ret = EasyStream{
-		config:     cfg,
-		inputCh:    taskCh,
-		outputCh:   resultCh,
-		workerList: make(map[int]*worker, numWorker),
+	ret = Config{
+		id:         superLastId,
+		fun:        fun,
+		worker:     numWorkers,
+		retry:      retryTimes,
+		retrySleep: retrySleep,
 	}
 
 	return
 }
 
 /*
-Uses for adding tasks for workers.
+Make new EasyTask.
+Config is made before make new EasyTask.
+
+Example:
+
+	task,_ := NewTask(config)
+*/
+func NewTask(config Config) (ret EasyTask, err error) {
+	// auto incremental number, get supervisor's id/
+	superLastId++
+
+	ret = EasyTask{
+		config:     config,
+		inputs:     make([][]interface{}, 0),
+		workerList: make(map[int]*worker, config.worker),
+	}
+
+	return
+}
+
+/*
+Make new EasyStream.
+Config is made before make new EasyTask.
+
+taskCh: channel EasyStream will wait & get task.
+resultCh: channel EastyStream will send out result of task.
+
+Example:
+
+	task,_ := NewStream(config)
+*/
+func NewStream(config Config, taskCh chan []interface{}, resultCh chan interface{}) (ret EasyStream, err error) {
+	// auto incremental number, get supervisor's id/
+	superLastId++
+
+	ret = EasyStream{
+		config:     config,
+		inputCh:    taskCh,
+		outputCh:   resultCh,
+		workerList: make(map[int]*worker, config.worker),
+	}
+
+	return
+}
+
+/*
+Uses for adding tasks for EasyTask.
 
 Example:
 
@@ -161,11 +176,11 @@ func (p *EasyTask) AddTask(i ...interface{}) {
 }
 
 /*
-Run func with task.
+Run func with existed task or waiting a new task.
 
 Example:
 
-	workers.Run()
+	easyTask.Run()
 */
 func (p *EasyTask) Run() (ret []interface{}, retErr error) {
 	ret = make([]interface{}, 0)
@@ -179,20 +194,20 @@ func (p *EasyTask) Run() (ret []interface{}, retErr error) {
 	}
 
 	// use for send function's params to worker.
-	inputCh := make(chan msg, p.config.numWorker)
+	inputCh := make(chan msg, p.config.worker)
 
 	// use for get result from worker.
-	resultCh := make(chan msg, p.config.numWorker)
+	resultCh := make(chan msg, p.config.worker)
 
 	// Start workers
-	for i := 0; i < p.config.numWorker; i++ {
+	for i := 0; i < p.config.worker; i++ {
 		opt := &worker{
-			id:        i,
-			fun:       p.config.fun,
-			cmd:       make(chan msg),
-			resultCh:  resultCh,
-			inputCh:   inputCh,
-			retryTime: p.config.numRetry,
+			id:         i,
+			fun:        p.config.fun,
+			cmd:        make(chan msg),
+			resultCh:   resultCh,
+			inputCh:    inputCh,
+			retryTimes: p.config.retry,
 		}
 		p.workerList[i] = opt
 
@@ -204,7 +219,7 @@ func (p *EasyTask) Run() (ret []interface{}, retErr error) {
 	go func() {
 		for index, params := range p.inputs {
 			fmt.Println("send params: ", params)
-			inputCh <- msg{id: index, msgType: TASK, data: params}
+			inputCh <- msg{id: index, msgType: iTASK, data: params}
 		}
 	}()
 
@@ -214,15 +229,15 @@ func (p *EasyTask) Run() (ret []interface{}, retErr error) {
 	for {
 		result := <-resultCh
 		switch result.msgType {
-		case SUCCESS: // task done
+		case iSUCCESS: // task done
 			fmt.Println("task", result.id, " is done, result:", result.data)
 			resultMap[result.id] = result.data
-		case ERROR: // task failed
+		case iERROR: // task failed
 			fmt.Println("task", result.id, " is failed, error:", result.data)
 			resultMap[result.id] = result.data
-		case FATAL_ERROR: // worker panic
+		case iFATAL_ERROR: // worker panic
 			fmt.Println(result.id, "worker is fatal error")
-		case QUIT: // worker quited
+		case iQUIT: // worker quited
 			fmt.Println(result.id, " exited")
 		}
 
@@ -235,7 +250,7 @@ func (p *EasyTask) Run() (ret []interface{}, retErr error) {
 	// send signal to worker to stop.
 	go func() {
 		for _, w := range p.workerList {
-			w.cmd <- msg{msgType: QUIT}
+			w.cmd <- msg{msgType: iQUIT}
 		}
 	}()
 
@@ -250,30 +265,30 @@ func (p *EasyTask) Run() (ret []interface{}, retErr error) {
 }
 
 /*
-Run func with task.
+Run func to process continuously.
 
 Example:
 
-	workers.Run()
+	easyStream.Run()
 */
 func (p *EasyStream) Run() (retErr error) {
 	// use for send function's params to worker.
-	inputCh := make(chan msg, p.config.numWorker)
+	inputCh := make(chan msg, p.config.worker)
 
 	// use for get result from worker.
-	resultCh := make(chan msg, p.config.numWorker)
+	resultCh := make(chan msg, p.config.worker)
 
 	p.cmdCh = make(chan int)
 
 	// Start workers
-	for i := 0; i < p.config.numWorker; i++ {
+	for i := 0; i < p.config.worker; i++ {
 		opt := &worker{
-			id:        i,
-			fun:       p.config.fun,
-			cmd:       make(chan msg),
-			resultCh:  resultCh,
-			inputCh:   inputCh,
-			retryTime: p.config.numRetry,
+			id:         i,
+			fun:        p.config.fun,
+			cmd:        make(chan msg),
+			resultCh:   resultCh,
+			inputCh:    inputCh,
+			retryTimes: p.config.retry,
 		}
 		p.workerList[i] = opt
 
@@ -286,7 +301,7 @@ func (p *EasyStream) Run() (retErr error) {
 		for {
 			params := <-p.inputCh
 			fmt.Println("stream received new params: ", params)
-			inputCh <- msg{id: STREAM, msgType: TASK, data: params}
+			inputCh <- msg{id: iSTREAM, msgType: iTASK, data: params}
 		}
 	}()
 
@@ -295,15 +310,15 @@ func (p *EasyStream) Run() (retErr error) {
 		for {
 			result := <-resultCh
 			switch result.msgType {
-			case SUCCESS: // task done
+			case iSUCCESS: // task done
 				fmt.Println("stream task", result.id, " is done, result:", result.data)
 				p.outputCh <- result.data
-			case ERROR: // task failed
+			case iERROR: // task failed
 				fmt.Println("stream task", result.id, " is failed, error:", result.data)
 				p.outputCh <- result.data
-			case FATAL_ERROR: // worker panic
+			case iFATAL_ERROR: // worker panic
 				fmt.Println(result.id, "worker (stream) is fatal error")
-			case QUIT: // worker quited
+			case iQUIT: // worker quited
 				fmt.Println(result.id, " exited (stream)")
 			}
 		}
@@ -314,9 +329,9 @@ func (p *EasyStream) Run() (retErr error) {
 		for {
 			cmd := <-p.cmdCh
 			switch cmd {
-			case QUIT:
+			case iQUIT:
 				for _, w := range p.workerList {
-					w.cmd <- msg{msgType: QUIT}
+					w.cmd <- msg{msgType: iQUIT}
 				}
 			}
 		}
@@ -325,9 +340,12 @@ func (p *EasyStream) Run() (retErr error) {
 	return
 }
 
-func (p *EasyStream) StopStream() error {
+/*
+Stop all workers.
+*/
+func (p *EasyStream) Stop() error {
 	if p.cmdCh != nil {
-		p.cmdCh <- QUIT
+		p.cmdCh <- iQUIT
 		return nil
 	} else {
 		return errors.New("EasyWorker isn't sart or wrong task's type")

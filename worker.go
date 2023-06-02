@@ -6,15 +6,16 @@ import (
 )
 
 const (
-	STREAM = -1
-	ERROR  = iota
-	FATAL_ERROR
-	SUCCESS
-	RETRY
-	CANCEL
-	RUN
-	QUIT
-	TASK
+	iSTREAM = -1
+
+	iERROR = iota
+	iFATAL_ERROR
+	iSUCCESS
+	iRETRY
+	iCANCEL
+	iRUN
+	iQUIT
+	iTASK
 )
 
 // struct carry task/command for worker.
@@ -30,7 +31,10 @@ type worker struct {
 	id int
 
 	// retry time, define by user.
-	retryTime int
+	retryTimes int
+
+	// sleep time between re-run.
+	retrySleep int
 
 	// function, define by user.
 	fun interface{}
@@ -50,11 +54,11 @@ start worker with options in struct.
 after start worker will wait task from supervisor.
 after task done, worker will send result back to supervisor with id of task.
 */
-func (opts *worker) run() {
+func (w *worker) run() {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println(opts.id, ", worker was panic, ", r)
-			opts.resultCh <- msg{id: opts.id, msgType: FATAL_ERROR, data: r}
+			fmt.Println(w.id, ", worker was panic, ", r)
+			w.resultCh <- msg{id: w.id, msgType: iFATAL_ERROR, data: r}
 		}
 	}()
 
@@ -66,37 +70,37 @@ func (opts *worker) run() {
 
 	for {
 		select {
-		case task = <-opts.inputCh:
-		case cmd := <-opts.cmd:
+		case task = <-w.inputCh:
+		case cmd := <-w.cmd:
 			// receive a quit signal.
-			if cmd.msgType == QUIT {
-				fmt.Println(opts.id, "is exited")
+			if cmd.msgType == iQUIT {
+				fmt.Println(w.id, "is exited")
 				return
 			}
 		}
 
-		fmt.Println(opts.id, ", received new task, ", task, "data:", task.data)
+		fmt.Println(w.id, ", received new task, ", task, "data:", task.data)
 
 		switch task.msgType {
-		case TASK:
+		case iTASK:
 			args := task.data.([]interface{})
-			i := 0
-			for ; i <= opts.retryTime; i++ {
+
+			for i := 0; i <= w.retryTimes; i++ {
 				if i > 0 {
-					fmt.Println(opts.id, ", retry(", i, ") function with last args")
+					fmt.Println(w.id, ", retry(", i, ") function with last args")
 				}
-				ret, err = InvokeFun(opts.fun, args...)
+				ret, err = invokeFun(w.fun, args...)
 				if err == nil {
 					break
 				}
 			}
 
 			if err != nil {
-				fmt.Println(opts.id, ", call function failed, error: ", err)
-				opts.resultCh <- msg{id: task.id, msgType: ERROR, data: err}
+				fmt.Println(w.id, ", call function failed, error: ", err)
+				w.resultCh <- msg{id: task.id, msgType: iERROR, data: err}
 			} else {
-				fmt.Println(opts.id, ", function return ", ret)
-				opts.resultCh <- msg{id: task.id, msgType: SUCCESS, data: ret}
+				fmt.Println(w.id, ", function return ", ret)
+				w.resultCh <- msg{id: task.id, msgType: iSUCCESS, data: ret}
 			}
 		}
 	}
@@ -105,7 +109,7 @@ func (opts *worker) run() {
 /*
 call user's function througth reflect.
 */
-func InvokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err error) {
+func invokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("call function failed, ", r)
