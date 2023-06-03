@@ -11,7 +11,6 @@ func LoopRun(a int, testSupporter chan int) {
 	testSupporter <- a
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
-		fmt.Println("loop at", i)
 	}
 	fmt.Println("Loop exit..")
 }
@@ -36,7 +35,7 @@ func TestSupAlwaysRestart1(t *testing.T) {
 
 	child, _ := NewChild(ALWAYS_RESTART, LoopRun, 5, ch)
 
-	sup.AddChild(child)
+	sup.AddChild(&child)
 
 	fmt.Println("start waiting signal from worker")
 	counter := 0
@@ -63,7 +62,7 @@ func TestSupAlwaysRestart2(t *testing.T) {
 
 	child, _ := NewChild(ALWAYS_RESTART, LoopRunWithPanic, 5, ch)
 
-	sup.AddChild(child)
+	sup.AddChild(&child)
 
 	counter := 0
 l:
@@ -88,7 +87,7 @@ func TestSupNormalRestart1(t *testing.T) {
 
 	child, _ := NewChild(NORMAL_RESTART, LoopRun, 5, ch)
 
-	sup.AddChild(child)
+	sup.AddChild(&child)
 
 	counter := 0
 l:
@@ -112,7 +111,7 @@ func TestSupNormalRestart2(t *testing.T) {
 
 	child, _ := NewChild(NORMAL_RESTART, LoopRunWithPanic, 5, ch)
 
-	sup.AddChild(child)
+	sup.AddChild(&child)
 
 	counter := 0
 l:
@@ -126,6 +125,43 @@ l:
 			}
 		case <-time.After(time.Second):
 			t.Error("timed out")
+		}
+	}
+}
+
+func TestSupStop(t *testing.T) {
+	ch := make(chan int)
+
+	sup := NewSupervisor()
+
+	sup.NewChild(ALWAYS_RESTART, LoopRun, 3, ch)
+	sup.NewChild(ALWAYS_RESTART, LoopRun, 3, ch)
+
+	counter := 0
+l:
+	for {
+		<-ch
+		counter++
+		if counter > 5 {
+			fmt.Println("send stop signal")
+			sup.Stop()
+			break l
+		}
+	}
+
+l2:
+	for {
+		select {
+		case <-ch:
+		case <-time.After(time.Second):
+			break l2
+		}
+	}
+
+	for _, child := range sup.children {
+		if child.canRun() {
+			t.Error("stop supervisor failed")
+			break
 		}
 	}
 }

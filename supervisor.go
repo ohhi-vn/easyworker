@@ -15,7 +15,7 @@ type cmd struct {
 
 type Supervisor struct {
 	id       int
-	children map[int]Child
+	children map[int]*Child
 	cmdCh    chan cmd
 }
 
@@ -24,7 +24,7 @@ func NewSupervisor() Supervisor {
 
 	ret := Supervisor{
 		id:       supervisorLastId,
-		children: make(map[int]Child),
+		children: make(map[int]*Child),
 		cmdCh:    make(chan cmd),
 	}
 
@@ -44,7 +44,7 @@ func (s *Supervisor) NewChild(restart int, fun interface{}, params ...interface{
 
 	childLastId++
 
-	child := Child{
+	child := &Child{
 		id:           childLastId,
 		restart_type: restart,
 		fun:          fun,
@@ -59,7 +59,7 @@ func (s *Supervisor) NewChild(restart int, fun interface{}, params ...interface{
 	return
 }
 
-func (s *Supervisor) AddChild(child Child) {
+func (s *Supervisor) AddChild(child *Child) {
 	s.children[child.id] = child
 	child.cmdCh = s.cmdCh
 
@@ -72,23 +72,29 @@ make a goroutine to handle event from children.
 func (s *Supervisor) start() {
 	go func() {
 		var (
-			child Child
+			child *Child
 		)
 		for {
 			event := <-s.cmdCh
 			switch event.typeCmd {
-			case CHILD_PANIC:
+			case iCHILD_PANIC:
 				child = s.children[event.id]
-				if child.restart_type == ALWAYS_RESTART || child.restart_type == NORMAL_RESTART {
-					child.status = CHILD_RESTARTING
+				if child.canRun() && (child.restart_type == ALWAYS_RESTART || child.restart_type == NORMAL_RESTART) {
+					child.updateStatus(iCHILD_RESTARTING)
 					fmt.Println("restarting child:", child.id)
-					child.run()
+					go child.run()
 				} else {
 					fmt.Println("child:", child.id, "stopped")
-					child.status = CHILD_STOPPED
+					child.updateStatus(iCHILD_STOPPED)
 				}
 
 			}
 		}
 	}()
+}
+
+func (s *Supervisor) Stop() {
+	for _, child := range s.children {
+		child.stop()
+	}
 }

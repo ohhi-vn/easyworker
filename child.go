@@ -3,6 +3,7 @@ package easyworker
 import (
 	"fmt"
 	"reflect"
+	"sync/atomic"
 )
 
 const (
@@ -17,11 +18,12 @@ const (
 )
 
 const (
-	CHILD_PANIC = iota
-	CHILD_DONE
-	CHILD_RUNING
-	CHILD_RESTARTING
-	CHILD_STOPPED
+	iCHILD_PANIC = iota
+	iCHILD_DONE
+	iCHILD_RUNING
+	iCHILD_RESTARTING
+	iCHILD_STOPPED
+	iCHILD_FORCE_QUIT
 )
 
 var (
@@ -33,7 +35,7 @@ type Child struct {
 	id           int
 	restart_type int
 	cmdCh        chan cmd
-	status       int
+	status       atomic.Int64
 
 	fun    interface{}
 	params []interface{}
@@ -63,11 +65,11 @@ func (c *Child) run() {
 	defer func() {
 		msg := cmd{
 			id:      c.id,
-			typeCmd: CHILD_DONE,
+			typeCmd: iCHILD_DONE,
 		}
 		if r := recover(); r != nil {
 			fmt.Println(c.id, ", worker was panic, ", r)
-			msg.typeCmd = CHILD_PANIC
+			msg.typeCmd = iCHILD_PANIC
 			msg.data = r
 		}
 
@@ -79,9 +81,16 @@ func (c *Child) run() {
 		err error
 	)
 
-	c.status = CHILD_RUNING
+	c.updateStatus(iCHILD_RUNING)
+
 l:
 	for {
+		fmt.Println(c.id, "status in for", c.getStatus())
+		if c.getStatus() == iCHILD_FORCE_QUIT {
+			fmt.Println(c.id, "force stop")
+			break l
+		}
+
 		// call user define function.
 		ret, err = invokeFun(c.fun, c.params...)
 
@@ -89,17 +98,14 @@ l:
 		case ALWAYS_RESTART:
 			if err != nil {
 				fmt.Println(c.id, "failed, reason:", err)
-
 			}
 			fmt.Println(c.id, "child re-run")
-			continue l
 		case NORMAL_RESTART:
 			if err == nil {
 				fmt.Println(c.id, "done, child no re-run")
 				break l
 			} else {
 				fmt.Println(c.id, "failed, child re-run, reason:", err)
-				continue l
 			}
 		case NO_RESTART:
 			if err != nil {
@@ -115,4 +121,23 @@ l:
 	} else {
 		fmt.Println(c.id, ", function return ", ret)
 	}
+}
+
+func (c *Child) stop() {
+	fmt.Println(c.id, "force stop...")
+	c.updateStatus(iCHILD_FORCE_QUIT)
+}
+
+func (c *Child) updateStatus(newStatus int) {
+	c.status.Store(int64(newStatus))
+	fmt.Println(c.id, "status after set", c.getStatus())
+}
+
+func (c *Child) getStatus() int {
+	return int(c.status.Load())
+}
+
+func (c *Child) canRun() bool {
+
+	return int(c.status.Load()) != iCHILD_FORCE_QUIT
 }

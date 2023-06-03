@@ -97,7 +97,7 @@ inCh := make(chan []interface{})
 outCh := make(chan interface{})
 
 // number of workers = number of cpu cores (logical cores)
-config, _ := easyworker.NewConfig(fnSum, DefaultNumWorker(), 3, 1000)
+config, _ := easyworker.NewConfig(fnSum, easyworker.DefaultNumWorker(), 3, 1000)
 
 // test with stream.
 myStream, _ := easyworker.NewStream(config, inCh, outCh)
@@ -123,8 +123,8 @@ go func() {
     }
 }()
 
-// wait for get result
-time.Sleep(time.Second)
+
+...
 
 // stop all worker
 myStream.Stop()
@@ -175,8 +175,14 @@ sup := easyworker.NewSupervisor()
 sup.NewChild(easyworker.NORMAL_RESTART, LoopRun, 5)
 
 // create a child
-child, _ := easyworker.NewChild(ALWAYS_RESTART, LoopRunWithPanic, 5)
+child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopRunWithPanic, 5)
 
 // add exists child.
-sup.AddChild(child)
+sup.AddChild(&child)
+
+...
+
+// stop all worker.
+// this function depends how long fun return.
+sup.Stop()
 ```
