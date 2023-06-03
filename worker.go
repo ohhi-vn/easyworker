@@ -128,7 +128,7 @@ func invokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err err
 	if numIn != len(args) && !fnType.IsVariadic() {
 		return reflect.ValueOf(nil), fmt.Errorf("func must have %d params. Have %d", numIn, len(args))
 	}
-	in := make([]reflect.Value, len(args))
+	params := make([]reflect.Value, len(args))
 	for i := 0; i < len(args); i++ {
 		var inType reflect.Type
 		if fnType.IsVariadic() && i >= numIn-1 {
@@ -142,13 +142,19 @@ func invokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err err
 		}
 		argType := argValue.Type()
 		if argType.ConvertibleTo(inType) {
-			in[i] = argValue.Convert(inType)
+			params[i] = argValue.Convert(inType)
 		} else {
 			return reflect.ValueOf(nil), fmt.Errorf("method Param[%d] must be %s. Have %s", i, inType, argType)
 		}
 	}
 
-	ret = fn.Call(in)[0]
+	result := fn.Call(params)
+
+	fmt.Println("invoke result:", result)
+
+	if len(result) > 0 {
+		ret = result[0]
+	}
 
 	return ret, nil
 }
