@@ -24,7 +24,7 @@ func Sum(a ...int) int {
 	return sum
 }
 
-func defaultConfig(fun interface{}) Config {
+func defaultConfig(fun any) Config {
 	config, _ := NewConfig(fun, 1, 0, 0)
 	return config
 }

@@ -36,6 +36,10 @@ easywork support 2 type of worker and a type of supervisor:
 * Stream, Start worker then push data to worker from channel. Workers run same type of task.
 * Supervisor, Start a supervisor for custom worker. Workers can run many type of task.
 
+Package use standard log package, if you want log to file please set output for log package.
+
+(*required Go 1.19 or later.*)
+
 ## EasyTask
 
 This is simple way to run parallel tasks.
@@ -104,8 +108,8 @@ fnStr = func (a int, suffix string) string {
 	return fmt.Sprintf("%d_%s", a, suffix)
 }
 
-inCh := make(chan []interface{})
-outCh := make(chan interface{})
+inCh := make(chan []any)
+outCh := make(chan any)
 
 // number of workers = number of cpu cores (logical cores)
 config, _ := easyworker.NewConfig(fnSum, easyworker.DefaultNumWorker(), 3, 1000)
@@ -127,10 +131,9 @@ go func() {
 // send data to stream.
 go func() {
     for i := 0; i < 15; i++ {
-        input := []interface{}{i, "3"}
+        input := []any{i, "3"}
         inCh <- input
         fmt.Println("stream sent: ", input)
-
     }
 }()
 

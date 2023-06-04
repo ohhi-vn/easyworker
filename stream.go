@@ -2,7 +2,7 @@ package easyworker
 
 import (
 	"errors"
-	"fmt"
+	"log"
 )
 
 /*
@@ -16,10 +16,10 @@ type EasyStream struct {
 	config Config
 
 	// inputs channel.
-	inputCh chan []interface{}
+	inputCh chan []any
 
 	// output channel.
-	outputCh chan interface{}
+	outputCh chan any
 
 	// cmd channel for supervisor.
 	cmdCh chan int
@@ -39,7 +39,7 @@ Example:
 
 	task,_ := NewStream(config)
 */
-func NewStream(config Config, taskCh chan []interface{}, resultCh chan interface{}) (ret EasyStream, err error) {
+func NewStream(config Config, taskCh chan []any, resultCh chan any) (ret EasyStream, err error) {
 	// auto incremental number, get supervisor's id/
 	taskLastId++
 
@@ -82,7 +82,7 @@ func (p *EasyStream) Run() (retErr error) {
 		}
 		p.workerList[i] = opt
 
-		fmt.Println("stream start worker", i)
+		log.Println("stream start worker", i)
 		go opt.run()
 	}
 
@@ -90,7 +90,7 @@ func (p *EasyStream) Run() (retErr error) {
 	go func() {
 		for {
 			params := <-p.inputCh
-			fmt.Println("stream received new params: ", params)
+			log.Println("stream received new params: ", params)
 			inputCh <- msg{id: iSTREAM, msgType: iTASK, data: params}
 		}
 	}()
@@ -101,15 +101,15 @@ func (p *EasyStream) Run() (retErr error) {
 			result := <-resultCh
 			switch result.msgType {
 			case iSUCCESS: // task done
-				fmt.Println("stream task", result.id, " is done, result:", result.data)
+				log.Println("stream task", result.id, " is done, result:", result.data)
 				p.outputCh <- result.data
 			case iERROR: // task failed
-				fmt.Println("stream task", result.id, " is failed, error:", result.data)
+				log.Println("stream task", result.id, " is failed, error:", result.data)
 				p.outputCh <- result.data
 			case iFATAL_ERROR: // worker panic
-				fmt.Println(result.id, "worker (stream) is fatal error")
+				log.Println(result.id, "worker (stream) is fatal error")
 			case iQUIT: // worker quited
-				fmt.Println(result.id, " exited (stream)")
+				log.Println(result.id, " exited (stream)")
 			}
 		}
 	}()

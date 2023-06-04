@@ -1,34 +1,28 @@
 package easyworker
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
 
 func LoopRun(a int, testSupporter chan int) {
-	fmt.Println("LoopRun, param:", a)
 	testSupporter <- a
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
 	}
-	fmt.Println("Loop exit..")
 }
 
 func LoopRunWithPanic(a int, testSupporter chan int) {
 	testSupporter <- a
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
-		fmt.Println("loop at", i)
 		if i == 1 {
 			panic("test loop with panic")
 		}
 	}
-	fmt.Println("Loop exit..")
 }
 
 func TestSupAlwaysRestart1(t *testing.T) {
-	fmt.Println("test TestSupAlwaysRestart1")
 	ch := make(chan int)
 
 	sup := NewSupervisor()
@@ -37,13 +31,11 @@ func TestSupAlwaysRestart1(t *testing.T) {
 
 	sup.AddChild(&child)
 
-	fmt.Println("start waiting signal from worker")
 	counter := 0
 l:
 	for {
 		select {
-		case param := <-ch:
-			fmt.Println("init param:", param)
+		case <-ch:
 			counter++
 			if counter > 3 {
 				break l
@@ -68,8 +60,7 @@ func TestSupAlwaysRestart2(t *testing.T) {
 l:
 	for {
 		select {
-		case param := <-ch:
-			fmt.Println("init param:", param)
+		case <-ch:
 			counter++
 			if counter > 3 {
 				break l
@@ -117,8 +108,7 @@ func TestSupNormalRestart2(t *testing.T) {
 l:
 	for {
 		select {
-		case param := <-ch:
-			fmt.Println("init param:", param)
+		case <-ch:
 			counter++
 			if counter > 3 {
 				break l
@@ -143,7 +133,6 @@ l:
 		<-ch
 		counter++
 		if counter > 5 {
-			fmt.Println("send stop signal")
 			sup.Stop()
 			break l
 		}

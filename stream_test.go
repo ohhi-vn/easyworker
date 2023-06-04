@@ -1,14 +1,13 @@
 package easyworker
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
 
 func TestStreamStopWithOutRun(t *testing.T) {
-	inCh := make(chan []interface{}, 1)
-	outCh := make(chan interface{})
+	inCh := make(chan []any, 1)
+	outCh := make(chan any)
 
 	// test with stream.
 	eWorker, err := NewStream(defaultConfig(StrId), inCh, outCh)
@@ -23,8 +22,8 @@ func TestStreamStopWithOutRun(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
-	inCh := make(chan []interface{}, 1)
-	outCh := make(chan interface{})
+	inCh := make(chan []any, 1)
+	outCh := make(chan any)
 
 	time.Sleep(time.Millisecond)
 
@@ -37,29 +36,26 @@ func TestStream(t *testing.T) {
 	e := eWorker.Run()
 	if e != nil {
 		t.Error("run stream task failed, ", e)
-	} else {
-		fmt.Println("stream is running")
 	}
 
 	go func() {
 		for {
-			r := <-outCh
-			fmt.Println("stream result: ", r)
+			// get result from stream
+			<-outCh
 		}
 	}()
 
 	go func() {
 		for i := 0; i < 15; i++ {
-			input := []interface{}{i, "3"}
-			inCh <- input
-			fmt.Println("stream sent: ", input)
+			input := []any{i, "3"}
 
+			// send task to stream
+			inCh <- input
 		}
 	}()
 
 	time.Sleep(2 * time.Second)
 
-	fmt.Println("send stop signal to stream")
 	eWorker.Stop()
 
 	time.Sleep(time.Second)

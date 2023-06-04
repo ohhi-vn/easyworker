@@ -2,6 +2,7 @@ package easyworker
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"sync/atomic"
 )
@@ -40,14 +41,14 @@ type Child struct {
 	cmdCh        chan msg
 	status       atomic.Int64
 
-	fun    interface{}
-	params []interface{}
+	fun    any
+	params []any
 }
 
 /*
 Create new child.
 */
-func NewChild(restart int, fun interface{}, params ...interface{}) (ret Child, retErr error) {
+func NewChild(restart int, fun any, params ...any) (ret Child, retErr error) {
 	if restart < ALWAYS_RESTART || restart > NO_RESTART {
 		retErr = fmt.Errorf("in correct restart type, input: %d", restart)
 		return
@@ -84,7 +85,7 @@ func (c *Child) run_task() {
 			msgType: iCHILD_DONE,
 		}
 		if r := recover(); r != nil {
-			fmt.Println(c.id, ", worker was panic, ", r)
+			log.Println(c.id, ", worker was panic, ", r)
 			msg.msgType = iCHILD_PANIC
 			msg.data = r
 		}
@@ -101,9 +102,8 @@ func (c *Child) run_task() {
 
 l:
 	for {
-		fmt.Println(c.id, "status in for", c.getStatus())
 		if c.getStatus() == iCHILD_FORCE_QUIT {
-			fmt.Println(c.id, "force stop")
+			log.Println(c.id, "force stop")
 			break l
 		}
 
@@ -113,19 +113,19 @@ l:
 		switch c.restart_type {
 		case ALWAYS_RESTART:
 			if err != nil {
-				fmt.Println(c.id, "failed, reason:", err)
+				log.Println(c.id, "failed, reason:", err)
 			}
-			fmt.Println(c.id, "child re-run")
+			log.Println(c.id, "child re-run")
 		case ERROR_RESTART:
 			if err == nil {
-				fmt.Println(c.id, "done, child no re-run")
+				log.Println(c.id, "done, child no re-run")
 				break l
 			} else {
-				fmt.Println(c.id, "failed, child re-run, reason:", err)
+				log.Println(c.id, "failed, child re-run, reason:", err)
 			}
 		case NO_RESTART:
 			if err != nil {
-				fmt.Println(c.id, "failed, no re-run, reason:", err)
+				log.Println(c.id, "failed, no re-run, reason:", err)
 				break l
 			}
 		}
@@ -133,20 +133,20 @@ l:
 	}
 
 	if err != nil {
-		fmt.Println(c.id, ", call function failed, error: ", err)
+		log.Println(c.id, ", call function failed, error: ", err)
 	} else {
-		fmt.Println(c.id, ", function return ", ret)
+		log.Println(c.id, ", function return ", ret)
 	}
 }
 
 func (c *Child) stop() {
-	fmt.Println(c.id, "force stop...")
+	log.Println(c.id, "force stop...")
 	c.updateStatus(iCHILD_FORCE_QUIT)
 }
 
 func (c *Child) updateStatus(newStatus int) {
 	c.status.Store(int64(newStatus))
-	fmt.Println(c.id, "status after set", c.getStatus())
+	log.Println(c.id, "status after set", c.getStatus())
 }
 
 func (c *Child) getStatus() int {

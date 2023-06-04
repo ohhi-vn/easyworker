@@ -1,8 +1,6 @@
 package easyworker
 
-import (
-	"fmt"
-)
+import "fmt"
 
 var (
 	// use to store last id of supervisor. id is auto_increment.
@@ -15,7 +13,7 @@ It's store options that input by user.
 */
 type Config struct {
 	// fun stores function add by user.
-	fun interface{}
+	fun any
 
 	// number of workers (goroutines)
 	worker int
@@ -36,12 +34,12 @@ retryTimes: Number of retry if func is failed.
 Example:
 
 	fn = func(n int, prefix string) string {
-		return fmt.Sprintf("%s_%d", prefix, n)
+		return log.Sprintf("%s_%d", prefix, n)
 	}
 
 	config,_ := NewConfig(fn, 3, 0, 0)
 */
-func NewConfig(fun interface{}, numWorkers int, retryTimes int, retrySleep int) (ret Config, err error) {
+func NewConfig(fun any, numWorkers int, retryTimes int, retrySleep int) (ret Config, err error) {
 	if err = verifyFunc(fun); err != nil {
 		return
 	}

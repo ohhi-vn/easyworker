@@ -1,7 +1,6 @@
 package easyworker
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
@@ -9,9 +8,7 @@ import (
 func LoopRun2(a int) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Second)
-		fmt.Println("loop at", i)
 	}
-	fmt.Println("Loop exit..")
 }
 
 func TestChildIncorrectedParams(t *testing.T) {

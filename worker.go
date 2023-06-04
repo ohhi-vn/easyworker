@@ -2,6 +2,7 @@ package easyworker
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 )
@@ -23,7 +24,7 @@ const (
 type msg struct {
 	id      int
 	msgType int
-	data    interface{}
+	data    any
 }
 
 // worker's information.
@@ -38,7 +39,7 @@ type worker struct {
 	retrySleep int
 
 	// function, define by user.
-	fun interface{}
+	fun any
 
 	// command channel, supervisor uses to send command to worker.
 	cmd chan msg
@@ -58,7 +59,7 @@ after task done, worker will send result back to supervisor with id of task.
 func (w *worker) run() {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println(w.id, ", worker was panic, ", r)
+			log.Println(w.id, ", worker was panic, ", r)
 			w.resultCh <- msg{id: w.id, msgType: iFATAL_ERROR, data: r}
 		}
 	}()
@@ -75,21 +76,21 @@ func (w *worker) run() {
 		case cmd := <-w.cmd:
 			// receive a quit signal.
 			if cmd.msgType == iQUIT {
-				fmt.Println(w.id, "is exited")
+				log.Println(w.id, "is exited")
 				return
 			}
 		}
 
-		fmt.Println(w.id, ", received new task, ", task, "data:", task.data)
+		log.Println(w.id, ", received new task, ", task, "data:", task.data)
 
 		switch task.msgType {
 		case iTASK:
-			args := task.data.([]interface{})
+			args := task.data.([]any)
 
 			for i := 0; i <= w.retryTimes; i++ {
 				if i > 0 {
 					time.Sleep(time.Millisecond * time.Duration(w.retrySleep))
-					fmt.Println(w.id, ", retry(", i, ") function with last args")
+					log.Println(w.id, ", retry(", i, ") function with last args")
 				}
 				ret, err = invokeFun(w.fun, args...)
 				if err == nil {
@@ -98,10 +99,10 @@ func (w *worker) run() {
 			}
 
 			if err != nil {
-				fmt.Println(w.id, ", call function failed, error: ", err)
+				log.Println(w.id, ", call function failed, error: ", err)
 				w.resultCh <- msg{id: task.id, msgType: iERROR, data: err}
 			} else {
-				fmt.Println(w.id, ", function return ", ret)
+				log.Println(w.id, ", function return ", ret)
 				w.resultCh <- msg{id: task.id, msgType: iSUCCESS, data: ret}
 			}
 		}
@@ -111,15 +112,15 @@ func (w *worker) run() {
 /*
 call user's function througth reflect.
 */
-func invokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err error) {
+func invokeFun(fun any, args ...any) (ret reflect.Value, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("call function failed, ", r)
+			log.Println("call function failed, ", r)
 			err = fmt.Errorf("call function failed, %s", r)
 		}
 	}()
 
-	fmt.Println("list args: ", args)
+	//log.Println("list args: ", args)
 
 	fn := reflect.ValueOf(fun)
 	fnType := fn.Type()
@@ -152,7 +153,7 @@ func invokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err err
 
 	result := fn.Call(params)
 
-	fmt.Println("invoke result:", result)
+	//log.Println("invoke result:", result)
 
 	if len(result) > 0 {
 		ret = result[0]
@@ -165,7 +166,7 @@ func invokeFun(fun interface{}, args ...interface{}) (ret reflect.Value, err err
 verify if interface is a function.
 if interface is not a function, it will return an error.
 */
-func verifyFunc(fun interface{}) error {
+func verifyFunc(fun any) error {
 	if v := reflect.ValueOf(fun); v.Kind() != reflect.Func {
 		return fmt.Errorf("you need give a real function")
 	}

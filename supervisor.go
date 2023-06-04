@@ -1,6 +1,9 @@
 package easyworker
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 var (
 	// use to store last id of supervisor. id is auto_increment.
@@ -37,7 +40,7 @@ func NewSupervisor() Supervisor {
 /*
 Add directly child to a supervisor.
 */
-func (s *Supervisor) NewChild(restart int, fun interface{}, params ...interface{}) (retErr error) {
+func (s *Supervisor) NewChild(restart int, fun any, params ...any) (retErr error) {
 	if restart < ALWAYS_RESTART || restart > NO_RESTART {
 		retErr = fmt.Errorf("in correct restart type, input: %d", restart)
 		return
@@ -90,10 +93,10 @@ func (s *Supervisor) start() {
 				child = s.children[event.id]
 				if child.canRun() && (child.restart_type == ALWAYS_RESTART || child.restart_type == ERROR_RESTART) {
 					child.updateStatus(iCHILD_RESTARTING)
-					fmt.Println("restarting child:", child.id)
+					log.Println("restarting child:", child.id)
 					child.run()
 				} else {
-					fmt.Println("child:", child.id, "stopped")
+					log.Println("child:", child.id, "stopped")
 					child.updateStatus(iCHILD_STOPPED)
 				}
 

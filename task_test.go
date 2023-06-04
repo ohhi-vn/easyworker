@@ -1,7 +1,7 @@
 package easyworker
 
 import (
-	"fmt"
+	"log"
 	"testing"
 )
 
@@ -30,7 +30,7 @@ func TestTaskList1(t *testing.T) {
 	if e != nil {
 		t.Error("run task failed, ", e)
 	} else {
-		fmt.Println("task result:", r)
+		log.Println("task result:", r)
 	}
 }
 
@@ -44,11 +44,8 @@ func TestTaskList2(t *testing.T) {
 	eWorker.AddTask(1, 2, 3)
 	eWorker.AddTask(3, 4, 5, 6, 7)
 
-	r, e := eWorker.Run()
+	_, e := eWorker.Run()
 	if e != nil {
 		t.Error("run task failed, ", e)
-	} else {
-		fmt.Println("task result:", r)
 	}
-
 }
