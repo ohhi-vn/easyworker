@@ -31,6 +31,9 @@ var (
 	childLastId int
 )
 
+/*
+A child struct that hold information a bout task, restart strategy.
+*/
 type Child struct {
 	id           int
 	restart_type int
@@ -41,6 +44,9 @@ type Child struct {
 	params []interface{}
 }
 
+/*
+Create new child.
+*/
 func NewChild(restart int, fun interface{}, params ...interface{}) (ret Child, retErr error) {
 	if restart < ALWAYS_RESTART || restart > NO_RESTART {
 		retErr = fmt.Errorf("in correct restart type, input: %d", restart)

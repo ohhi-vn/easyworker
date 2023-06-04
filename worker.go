@@ -3,6 +3,7 @@ package easyworker
 import (
 	"fmt"
 	"reflect"
+	"time"
 )
 
 const (
@@ -87,6 +88,7 @@ func (w *worker) run() {
 
 			for i := 0; i <= w.retryTimes; i++ {
 				if i > 0 {
+					time.Sleep(time.Millisecond * time.Duration(w.retrySleep))
 					fmt.Println(w.id, ", retry(", i, ") function with last args")
 				}
 				ret, err = invokeFun(w.fun, args...)

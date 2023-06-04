@@ -13,12 +13,20 @@ type cmd struct {
 	data    interface{}
 }
 
+/*
+A supervisor that controll children(workers).
+Supervisor privides interface to user with simple APIs.
+You can run multi instance supervisor in your application.
+*/
 type Supervisor struct {
 	id       int
 	children map[int]*Child
 	cmdCh    chan cmd
 }
 
+/*
+Create new supervisor.
+*/
 func NewSupervisor() Supervisor {
 	supervisorLastId++
 
@@ -32,6 +40,9 @@ func NewSupervisor() Supervisor {
 	return ret
 }
 
+/*
+Add directly child to a supervisor.
+*/
 func (s *Supervisor) NewChild(restart int, fun interface{}, params ...interface{}) (retErr error) {
 	if restart < ALWAYS_RESTART || restart > NO_RESTART {
 		retErr = fmt.Errorf("in correct restart type, input: %d", restart)
@@ -59,6 +70,10 @@ func (s *Supervisor) NewChild(restart int, fun interface{}, params ...interface{
 	return
 }
 
+/*
+Add existed child to supervisor.
+A child can add to run in one or more supervisor.
+*/
 func (s *Supervisor) AddChild(child *Child) {
 	s.children[child.id] = child
 	child.cmdCh = s.cmdCh
@@ -93,6 +108,10 @@ func (s *Supervisor) start() {
 	}()
 }
 
+/*
+Supervisor will send stop signal to children.
+Child after process your function will check the signal and stop.
+*/
 func (s *Supervisor) Stop() {
 	for _, child := range s.children {
 		child.stop()

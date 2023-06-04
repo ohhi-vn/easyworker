@@ -17,11 +17,14 @@ The package has two main part:
 
 Start worker and moniter worker.
 Send task to worker and get result.
+Restart child if it failed. It's depended about restart strategy of child.
+Supervisor has one owner goroutine for send & manage signal to children.
 
 ## Child
 
 Run task with user's function and handle error.
 If user's function panic worker will check retry config and re-run if needed.
+Each child has owner goroutine to run task.
 
 # Guide
 
@@ -34,7 +37,8 @@ easywork support 2 type of worker and a type of supervisor:
 ## EasyTask
 
 This is simple way to run parallel task.
-User doesn't to manage goroutine, channel,...
+User doesn't need to manage goroutine, channel,...
+Number of workers is number of goroutine will run tasks.
 
 EasyTask example:
 
@@ -81,6 +85,7 @@ if e != nil {
 This is used for streaming type.
 In this case, tasks are continuously send to worker by user's channel.
 Results will receive from other channle of user.
+Number of workers is number of goroutines used for running stream task.
 
 EasyStream example:
 
