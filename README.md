@@ -75,16 +75,16 @@ supervisor example:
 
 ```go
 // example function need to run in child.
-loopRun1 = func(a int) {
+loop = func(a int) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Second)
 		fmt.Println("loop at", i)
 	}
-	fmt.Println("Loop exit..")
+	fmt.Println("Loop exit...")
 }
 
 // example function run in child. It will panic if counter > 3
-LoopRunWithPanic = func(a int) {
+LoopWithPanic = func(a int) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Second)
 		fmt.Println("loop at", i)
@@ -93,22 +93,22 @@ LoopRunWithPanic = func(a int) {
 		}
 	}
     // maybe you won't see this.
-	fmt.Println("Loop exit..")
+	fmt.Println("LoopWithPanic exit...")
 }
 
 // create a supervisor
 sup := easyworker.NewSupervisor()
 
 // add direct child to supervisor.
-sup.NewChild(easyworker.ERROR_RESTART, LoopRun, 5)
+sup.NewChild(easyworker.ERROR_RESTART, Loop, 5)
 
 // create a child
-child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopRunWithPanic, 5)
+child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopWithPanic, 5)
 
 // add exists child.
 sup.AddChild(&child)
 
-...
+//...
 
 // stop all worker.
 // this function depends how long fun return.
@@ -126,12 +126,11 @@ In retry case, worker will re-use last parameters of task.
 EasyTask example:
 
 ```go
-fnSum = func(a ...int) int {
-	sum := 0
+fnSum = func(a ...int) (ret int) {
 	for _, i := range a {
-		sum += i
+		ret += i
 	}
-	return sum
+	return ret
 }
 
 // number of workers
@@ -152,6 +151,7 @@ task, _ := easyworker.NewTask(config)
 // add tasks
 myTask.AddTask(1, 2, 3)
 myTask.AddTask(3, 4, 5, 6, 7)
+myTask.AddTask(11, 22)
 
 // start workers
 r, e := myTask.Run()
@@ -183,11 +183,14 @@ fnStr = func (a int, suffix string) string {
 	return fmt.Sprintf("%d_%s", a, suffix)
 }
 
+// input channel
 inCh := make(chan []any)
+
+// result channel
 outCh := make(chan any)
 
 // number of workers = number of cpu cores (logical cores)
-config, _ := easyworker.NewConfig(fnSum, easyworker.DefaultNumWorker(), 3, 1000)
+config, _ := easyworker.NewConfig(fnStr, easyworker.DefaultNumWorker(), 3, 1000)
 
 // test with stream.
 myStream, _ := easyworker.NewStream(config, inCh, outCh)
@@ -206,14 +209,14 @@ go func() {
 // send data to stream.
 go func() {
     for i := 0; i < 15; i++ {
-        input := []any{i, "3"}
+        input := []any{i, "hello"}
         inCh <- input
         fmt.Println("stream sent: ", input)
     }
 }()
 
 
-...
+//...
 
 // stop all worker
 myStream.Stop()
