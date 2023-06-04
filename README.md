@@ -40,111 +40,23 @@ Package use standard log package, if you want log to file please set output for 
 
 (*required Go 1.19 or later.*)
 
-## EasyTask
+## Install
 
-This is simple way to run parallel tasks.
-User doesn't need to manage goroutine, channel,...
-Number of workers is number of goroutine will run tasks.
+Add package to go.mod
 
-In retry case, worker will re-use last parameters of task.
-
-EasyTask example:
-
-```go
-fnSum = func(a ...int) int {
-	sum := 0
-	for _, i := range a {
-		sum += i
-	}
-	return sum
-}
-
-// number of workers
-numWorkers := 3
-
-// retry times
-retryTimes := 0
-
-// sleep time before re-run
-retrySleep := 0
-
-// new config for EasyTask
-config, _ := easyworker.NewConfig(fnSum, numWorkers, retryTimes, retrySleep)
-
-// new EasyTask
-task, _ := easyworker.NewTask(config)
-
-// add tasks
-myTask.AddTask(1, 2, 3)
-myTask.AddTask(3, 4, 5, 6, 7)
-
-// start workers
-r, e := myTask.Run()
-
-if e != nil {
-    t.Error("run task failed, ", e)
-} else {
-    fmt.Println("task result:", r)
-}
+```bash
+go get github.com/manhvu/easyworker
 ```
 
-## EasyStream
-
-This is used for streaming type.
-In this case, tasks are continuously send to worker by user's channel.
-Results will receive from other channle of user.
-Number of workers is number of goroutines used for running stream task.
-
-In retry case, worker will re-use last parameters of task.
-
-EasyStream example:
+Import package
 
 ```go
-// fun will do task
-fnStr = func (a int, suffix string) string {
-	if a%3 == 0 {
-		panic("panic from user func")
-	}
-	return fmt.Sprintf("%d_%s", a, suffix)
-}
-
-inCh := make(chan []any)
-outCh := make(chan any)
-
-// number of workers = number of cpu cores (logical cores)
-config, _ := easyworker.NewConfig(fnSum, easyworker.DefaultNumWorker(), 3, 1000)
-
-// test with stream.
-myStream, _ := easyworker.NewStream(config, inCh, outCh)
-
-// start stream.
-myStream.Run()
-
-// receive data from stream.
-go func() {
-    for {
-        r := <-outCh
-        fmt.Println("stream result: ", r)
-    }
-}()
-
-// send data to stream.
-go func() {
-    for i := 0; i < 15; i++ {
-        input := []any{i, "3"}
-        inCh <- input
-        fmt.Println("stream sent: ", input)
-    }
-}()
-
-
-...
-
-// stop all worker
-myStream.Stop()
+import "github.com/manhvu/easyworker"
 ```
 
-## Supervisor
+## Use Cases
+
+### Supervisor
 
 This is used for generic purpose worker(child).
 Every children has a owner restart strategy.
@@ -202,3 +114,108 @@ sup.AddChild(&child)
 // this function depends how long fun return.
 sup.Stop()
 ```
+
+### EasyTask
+
+This is simple way to run parallel tasks.
+User doesn't need to manage goroutine, channel,...
+Number of workers is number of goroutine will run tasks.
+
+In retry case, worker will re-use last parameters of task.
+
+EasyTask example:
+
+```go
+fnSum = func(a ...int) int {
+	sum := 0
+	for _, i := range a {
+		sum += i
+	}
+	return sum
+}
+
+// number of workers
+numWorkers := 3
+
+// retry times
+retryTimes := 0
+
+// sleep time before re-run
+retrySleep := 0
+
+// new config for EasyTask
+config, _ := easyworker.NewConfig(fnSum, numWorkers, retryTimes, retrySleep)
+
+// new EasyTask
+task, _ := easyworker.NewTask(config)
+
+// add tasks
+myTask.AddTask(1, 2, 3)
+myTask.AddTask(3, 4, 5, 6, 7)
+
+// start workers
+r, e := myTask.Run()
+
+if e != nil {
+    t.Error("run task failed, ", e)
+} else {
+    fmt.Println("task result:", r)
+}
+```
+
+### EasyStream
+
+This is used for streaming type.
+In this case, tasks are continuously send to worker by user's channel.
+Results will receive from other channle of user.
+Number of workers is number of goroutines used for running stream task.
+
+In retry case, worker will re-use last parameters of task.
+
+EasyStream example:
+
+```go
+// fun will do task
+fnStr = func (a int, suffix string) string {
+	if a%3 == 0 {
+		panic("panic from user func")
+	}
+	return fmt.Sprintf("%d_%s", a, suffix)
+}
+
+inCh := make(chan []any)
+outCh := make(chan any)
+
+// number of workers = number of cpu cores (logical cores)
+config, _ := easyworker.NewConfig(fnSum, easyworker.DefaultNumWorker(), 3, 1000)
+
+// test with stream.
+myStream, _ := easyworker.NewStream(config, inCh, outCh)
+
+// start stream.
+myStream.Run()
+
+// receive data from stream.
+go func() {
+    for {
+        r := <-outCh
+        fmt.Println("stream result: ", r)
+    }
+}()
+
+// send data to stream.
+go func() {
+    for i := 0; i < 15; i++ {
+        input := []any{i, "3"}
+        inCh <- input
+        fmt.Println("stream sent: ", input)
+    }
+}()
+
+
+...
+
+// stop all worker
+myStream.Stop()
+```
+
