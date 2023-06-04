@@ -85,7 +85,7 @@ func TestSupNormalRestart1(t *testing.T) {
 
 	sup := NewSupervisor()
 
-	child, _ := NewChild(NORMAL_RESTART, LoopRun, 5, ch)
+	child, _ := NewChild(ERROR_RESTART, LoopRun, 5, ch)
 
 	sup.AddChild(&child)
 
@@ -96,7 +96,7 @@ l:
 		case <-ch:
 			counter++
 			if counter > 1 {
-				t.Error("unexpected, child was restarted in NORMAL_RESTART strategy, fun run sucessful")
+				t.Error("unexpected, child was restarted in ERROR_RESTART strategy, fun run sucessful")
 			}
 		case <-time.After(time.Second):
 			break l
@@ -109,7 +109,7 @@ func TestSupNormalRestart2(t *testing.T) {
 
 	sup := NewSupervisor()
 
-	child, _ := NewChild(NORMAL_RESTART, LoopRunWithPanic, 5, ch)
+	child, _ := NewChild(ERROR_RESTART, LoopRunWithPanic, 5, ch)
 
 	sup.AddChild(&child)
 

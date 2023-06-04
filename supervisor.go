@@ -7,12 +7,6 @@ var (
 	supervisorLastId int
 )
 
-type cmd struct {
-	id      int
-	typeCmd int
-	data    interface{}
-}
-
 /*
 A supervisor that controll children(workers).
 Supervisor privides interface to user with simple APIs.
@@ -21,7 +15,7 @@ You can run multi instance supervisor in your application.
 type Supervisor struct {
 	id       int
 	children map[int]*Child
-	cmdCh    chan cmd
+	cmdCh    chan msg
 }
 
 /*
@@ -33,7 +27,7 @@ func NewSupervisor() Supervisor {
 	ret := Supervisor{
 		id:       supervisorLastId,
 		children: make(map[int]*Child),
-		cmdCh:    make(chan cmd),
+		cmdCh:    make(chan msg),
 	}
 
 	ret.start()
@@ -65,7 +59,7 @@ func (s *Supervisor) NewChild(restart int, fun interface{}, params ...interface{
 	s.children[child.id] = child
 	child.cmdCh = s.cmdCh
 
-	go child.run()
+	child.run()
 
 	return
 }
@@ -78,7 +72,7 @@ func (s *Supervisor) AddChild(child *Child) {
 	s.children[child.id] = child
 	child.cmdCh = s.cmdCh
 
-	go child.run()
+	child.run()
 }
 
 /*
@@ -91,13 +85,13 @@ func (s *Supervisor) start() {
 		)
 		for {
 			event := <-s.cmdCh
-			switch event.typeCmd {
+			switch event.msgType {
 			case iCHILD_PANIC:
 				child = s.children[event.id]
-				if child.canRun() && (child.restart_type == ALWAYS_RESTART || child.restart_type == NORMAL_RESTART) {
+				if child.canRun() && (child.restart_type == ALWAYS_RESTART || child.restart_type == ERROR_RESTART) {
 					child.updateStatus(iCHILD_RESTARTING)
 					fmt.Println("restarting child:", child.id)
-					go child.run()
+					child.run()
 				} else {
 					fmt.Println("child:", child.id, "stopped")
 					child.updateStatus(iCHILD_STOPPED)

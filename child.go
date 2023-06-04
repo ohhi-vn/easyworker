@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	// Always restart child
+	// Always restart child for both case, done task normally or panic.
 	ALWAYS_RESTART = iota
 
-	// Just restart if child got an error
-	NORMAL_RESTART
+	// Just restart if child got an panic.
+	ERROR_RESTART
 
-	// No restart child
+	// No restart child for any reason.
 	NO_RESTART
 )
 
@@ -37,7 +37,7 @@ A child struct that hold information a bout task, restart strategy.
 type Child struct {
 	id           int
 	restart_type int
-	cmdCh        chan cmd
+	cmdCh        chan msg
 	status       atomic.Int64
 
 	fun    interface{}
@@ -67,15 +67,25 @@ func NewChild(restart int, fun interface{}, params ...interface{}) (ret Child, r
 	}, nil
 }
 
+/*
+Start goroutine to execute task.
+*/
 func (c *Child) run() {
+	go c.run_task()
+}
+
+/*
+Run task.
+*/
+func (c *Child) run_task() {
 	defer func() {
-		msg := cmd{
+		msg := msg{
 			id:      c.id,
-			typeCmd: iCHILD_DONE,
+			msgType: iCHILD_DONE,
 		}
 		if r := recover(); r != nil {
 			fmt.Println(c.id, ", worker was panic, ", r)
-			msg.typeCmd = iCHILD_PANIC
+			msg.msgType = iCHILD_PANIC
 			msg.data = r
 		}
 
@@ -106,7 +116,7 @@ l:
 				fmt.Println(c.id, "failed, reason:", err)
 			}
 			fmt.Println(c.id, "child re-run")
-		case NORMAL_RESTART:
+		case ERROR_RESTART:
 			if err == nil {
 				fmt.Println(c.id, "done, child no re-run")
 				break l
