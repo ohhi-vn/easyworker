@@ -1,3 +1,5 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/manhvu/easyworker.svg)](https://pkg.go.dev/github.com/manhvu/easyworker)
+
 # Introduce
 
 A Golang package for supporting worker supervisor model.
