@@ -114,3 +114,18 @@ func (s *Supervisor) Stop() {
 		child.stop()
 	}
 }
+
+func (s *Supervisor) Stats() (running, stopped, restarting int) {
+	for _, child := range s.children {
+		switch child.getStatus() {
+		case iCHILD_RUNNING:
+			running++
+		case iCHILD_RESTARTING:
+			restarting++
+		default:
+			stopped++
+		}
+	}
+
+	return
+}

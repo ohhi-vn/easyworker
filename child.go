@@ -21,7 +21,7 @@ const (
 const (
 	iCHILD_PANIC = iota
 	iCHILD_DONE
-	iCHILD_RUNING
+	iCHILD_RUNNING
 	iCHILD_RESTARTING
 	iCHILD_STOPPED
 	iCHILD_FORCE_QUIT
@@ -88,6 +88,8 @@ func (c *Child) run_task() {
 			log.Println(c.id, ", worker was panic, ", r)
 			msg.msgType = iCHILD_PANIC
 			msg.data = r
+		} else {
+			c.updateStatus(iCHILD_STOPPED)
 		}
 
 		c.cmdCh <- msg
@@ -98,7 +100,7 @@ func (c *Child) run_task() {
 		err error
 	)
 
-	c.updateStatus(iCHILD_RUNING)
+	c.updateStatus(iCHILD_RUNNING)
 
 l:
 	for {

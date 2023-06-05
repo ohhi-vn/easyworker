@@ -6,7 +6,7 @@ A Golang package for supporting worker supervisor model.
 The package help developer easy to run parallel tasks.
 It's scalable with minimum effort.
 
-easyworker inspired by Erlang OTP.
+easyworker package is inspired by Erlang OTP.
 
 # Design
 
@@ -17,24 +17,24 @@ The package has two main part:
 
 ## Supervisor
 
-Start worker and moniter worker.
-Send task to worker and get result(for task & stream).
-Restart child if it failed. It's depended about restart strategy of child.
-Supervisor has one owner goroutine for send & manage signal to children.
+Start workers and monitor workers.
+Send task to workers and get result(for task & stream).
+Restart children if they're failed (depends restart strategy).
+Supervisor has one goroutine for send & manage signal to children.
 
 ## Child
 
 Run task with user's function and handle error.
 If user's function panic worker will check retry config and re-run (depend restart strategy/retry times) if needed.
-Each child has owner goroutine to run task.
+Each child has a goroutine to run its task.
 
 # Guide
 
-easywork support 2 type of worker and a type of supervisor:
+easyworker support 3 type of workers:
 
-* Task, Add a list of task and run worker. Workers run same type of task.
-* Stream, Start worker then push data to worker from channel. Workers run same type of task.
-* Supervisor, Start a supervisor for custom worker. Workers can run many type of task.
+* Supervisor, Start a supervisor for managing custom workers. Workers can run many type of tasks.
+* Task, Add a list of task and run workers. Workers run same type of task.
+* Stream, Start workers then push tasks to workers from channel. Workers run same type of task.
 
 Package use standard log package, if you want log to file please set output for log package.
 
@@ -58,18 +58,18 @@ import "github.com/manhvu/easyworker"
 
 ### Supervisor
 
-This is used for generic purpose worker(child).
+This is used for generic worker(child).
 Every children has a owner restart strategy.
 
 Currently, child has three type of restart strategy:
 
-* ALWAYS_RESTART, supervisor always restart child if it panic/done.
-* ERROR_RESTART, supervisor will restart if child was panic.
-* NO_RESTART, supervisor will don't restart for any reason.
+* ALWAYS_RESTART, supervisor always restart children if it panic/done.
+* ERROR_RESTART, supervisor will restart if children was panic.
+* NO_RESTART, supervisor will don't restart children for any reason.
 
-Child will be started after add to supervisor.
+Children will be started after they are added to supervisor.
 
-In restart case, child will re-use last parameters of task.
+In restart case, child will re-use last parameters (if task don't change it) of task.
 
 supervisor example:
 
@@ -101,6 +101,8 @@ sup := easyworker.NewSupervisor()
 
 // add direct child to supervisor.
 sup.NewChild(easyworker.ERROR_RESTART, Loop, 5)
+sup.NewChild(easyworker.NO_RESTART, LoopWithPanic, 5)
+
 
 // create a child
 child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopWithPanic, 5)
@@ -165,12 +167,12 @@ if e != nil {
 
 ### EasyStream
 
-This is used for streaming type.
+This type is used for streaming type.
 In this case, tasks are continuously send to worker by user's channel.
 Results will receive from other channle of user.
-Number of workers is number of goroutines used for running stream task.
+Number of workers is number of goroutines used for processing streaming task.
 
-In retry case, worker will re-use last parameters of task.
+In retry case, workers will re-use last parameters of task.
 
 EasyStream example:
 

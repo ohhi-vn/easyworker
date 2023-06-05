@@ -1,14 +1,30 @@
 package easyworker
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
+
+func SimpleLoop(a int) {
+	for i := 0; i < a; i++ {
+		time.Sleep(time.Millisecond)
+	}
+}
 
 func LoopRun(a int, testSupporter chan int) {
 	testSupporter <- a
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
+	}
+}
+
+func SimpleLoopWithPanic(a int) {
+	for i := 0; i < a; i++ {
+		time.Sleep(time.Millisecond)
+		if i == 1 {
+			panic("test loop with panic")
+		}
 	}
 }
 
@@ -152,5 +168,29 @@ l2:
 			t.Error("stop supervisor failed")
 			break
 		}
+	}
+}
+
+func TestSupMultiWorkers(t *testing.T) {
+	sup := NewSupervisor()
+
+	for i := 0; i < 100; i++ {
+		sup.NewChild(ALWAYS_RESTART, SimpleLoopWithPanic, i)
+	}
+
+	for i := 0; i < 100; i++ {
+		sup.NewChild(ERROR_RESTART, SimpleLoop, i)
+	}
+
+	time.Sleep(2 * time.Second)
+
+	running, stopped, restarting := sup.Stats()
+
+	sup.Stop()
+
+	fmt.Printf("Running: %d, Stopped: %d, Restarting: %d\n", running, stopped, restarting)
+
+	if stopped != 100 || restarting+running != 100 {
+		t.Error("has children status failed")
 	}
 }
