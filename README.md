@@ -117,6 +117,37 @@ sup.AddChild(&child)
 sup.Stop()
 ```
 
+Supervisor support context by create supervisor by function `NewSupervisorWithContext`.
+In case supervisor with context, the first parameter of user function will be context.
+Context will include supervisor's id and child's id.
+
+User code can get with key:
+
+* CTX_SUP_ID for supervisor's id
+* CTX_CHILD_ID for child's id
+
+Call `GetSupervisor` to get supervisor from supervisor's id.
+
+To get child please call `GetChild` method of supervisor.
+
+Example:
+
+```go
+loopWithContext = func(ctx context.Context, a int) {
+	supId := ctx.Value(easyworker.CTX_SUP_ID)
+	childId := ctx.Value(easyworker.CTX_CHILD_ID)
+
+	for i := 0; i < a; i++ {
+		fmt.Println("Sup: ", supId, "Child:", childId, "counter:", i)
+		time.Sleep(time.Millisecond)
+	}
+}
+
+sup := NewSupervisorWithContext(context.Background())
+
+sup.NewChild(NO_RESTART, loopWithContext, 10)
+```
+
 For other APIs please go to [pkg.go](https://pkg.go.dev/github.com/manhvu/easyworker)
 
 ### EasyTask
@@ -167,33 +198,6 @@ func parallelTasks() {
 		fmt.Println("task result:", r)
 	}
 }
-```
-
-Supervisor support context by create supervisor by function `NewSupervisorWithContext`.
-In case supervisor with context, the first parameter of user function will be context.
-Context will include supervisor's id and child's id.
-
-User code can get with key:
-
-* CTX_SUP_ID for supervisor's id
-* CTX_CHILD_ID for child's id
-
-Example:
-
-```go
-loopWithContext = func(ctx context.Context, a int) {
-	supId := ctx.Value(easyworker.CTX_SUP_ID)
-	childId := ctx.Value(easyworker.CTX_CHILD_ID)
-
-	for i := 0; i < a; i++ {
-		fmt.Println("Sup: ", supId, "Child:", childId, "counter:", i)
-		time.Sleep(time.Millisecond)
-	}
-}
-
-sup := NewSupervisorWithContext(context.Background())
-
-sup.NewChild(NO_RESTART, loopWithContext, 10)
 ```
 
 ### EasyStream

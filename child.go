@@ -37,11 +37,11 @@ const (
 
 var (
 	// use to store last id of child. id is auto_increment.
-	childLastId atomic.Int64
+	lastChildId atomic.Int64
 )
 
 func getNewChildId() int64 {
-	return childLastId.Add(1)
+	return lastChildId.Add(1)
 }
 
 /*
