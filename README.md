@@ -12,8 +12,8 @@ easyworker package is inspired by Erlang OTP.
 
 The package has two main part:
 
-* The supervisor: Manage child, give a task to child & collect result.
-* The child: Receive task, run task then send result to supervisor.
+* The supervisor: Manage children, give a task to children & collect result.
+* The children: Receive tasks, run tasks then send results to supervisor.
 
 ## Supervisor
 
@@ -84,12 +84,12 @@ loop = func(a int) {
 }
 
 // example function run in child. It will panic if counter > 3
-LoopWithPanic = func(a int) {
+LoopWithPanic = func(a int, panicString string) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Second)
 		fmt.Println("loop at", i)
 		if i > 3 {
-			panic("test loop with panic")
+			panic(panicString)
 		}
 	}
     // maybe you won't see this.
@@ -101,11 +101,11 @@ sup := easyworker.NewSupervisor()
 
 // add direct child to supervisor.
 sup.NewChild(easyworker.ERROR_RESTART, Loop, 5)
-sup.NewChild(easyworker.NO_RESTART, LoopWithPanic, 5)
+sup.NewChild(easyworker.NO_RESTART, LoopWithPanic, 5, "test panic")
 
 
 // create a child
-child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopWithPanic, 5)
+child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopWithPanic, 5, "other panic")
 
 // add exists child.
 sup.AddChild(&child)
@@ -117,10 +117,12 @@ sup.AddChild(&child)
 sup.Stop()
 ```
 
+For other APIs please go to [pkg.go](https://pkg.go.dev/github.com/manhvu/easyworker)
+
 ### EasyTask
 
 This is simple way to run parallel tasks.
-User doesn't need to manage goroutine, channel,...
+User doesn't need to manage goroutine, channel, ...
 Number of workers is number of goroutine will run tasks.
 
 In retry case, worker will re-use last parameters of task.
@@ -128,40 +130,42 @@ In retry case, worker will re-use last parameters of task.
 EasyTask example:
 
 ```go
-fnSum = func(a ...int) (ret int) {
+func sum(a ...int) (ret int) {
 	for _, i := range a {
 		ret += i
 	}
 	return ret
 }
 
-// number of workers
-numWorkers := 3
+func parallelTasks() {
+	// number of workers
+	numWorkers := 3
 
-// retry times
-retryTimes := 0
+	// retry times
+	retryTimes := 0
 
-// sleep time before re-run
-retrySleep := 0
+	// sleep time before re-run
+	retrySleep := 0
 
-// new config for EasyTask
-config, _ := easyworker.NewConfig(fnSum, numWorkers, retryTimes, retrySleep)
+	// new config for EasyTask
+	config, _ := easyworker.NewConfig(sum, numWorkers, retryTimes, retrySleep)
 
-// new EasyTask
-task, _ := easyworker.NewTask(config)
+	// new EasyTask
+	task, _ := easyworker.NewTask(config)
 
-// add tasks
-myTask.AddTask(1, 2, 3)
-myTask.AddTask(3, 4, 5, 6, 7)
-myTask.AddTask(11, 22)
+	// add tasks
+	myTask.AddTask(1, 2, 3)
+	myTask.AddTask(3, 4, 5, 6, 7)
+	myTask.AddTask(11, 22)
 
-// start workers
-r, e := myTask.Run()
+	// start workers
+	r, e := myTask.Run()
 
-if e != nil {
-    t.Error("run task failed, ", e)
-} else {
-    fmt.Println("task result:", r)
+	if e != nil {
+		t.Error("run task failed, ", e)
+	} else {
+		fmt.Println("task result:", r)
+	}
 }
 ```
 
@@ -178,7 +182,7 @@ EasyStream example:
 
 ```go
 // fun will do task
-fnStr = func (a int, suffix string) string {
+fnStr = func(a int, suffix string) string {
 	if a%3 == 0 {
 		panic("panic from user func")
 	}

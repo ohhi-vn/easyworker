@@ -6,20 +6,20 @@ import (
 	"time"
 )
 
-func SimpleLoop(a int) {
+func simpleLoop(a int) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
 	}
 }
 
-func LoopRun(a int, testSupporter chan int) {
+func loopRun(a int, testSupporter chan int) {
 	testSupporter <- a
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
 	}
 }
 
-func SimpleLoopWithPanic(a int) {
+func simpleLoopWithPanic(a int) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
 		if i == 1 {
@@ -28,7 +28,7 @@ func SimpleLoopWithPanic(a int) {
 	}
 }
 
-func LoopRunWithPanic(a int, testSupporter chan int) {
+func loopRunWithPanic(a int, testSupporter chan int) {
 	testSupporter <- a
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
@@ -43,7 +43,7 @@ func TestSupAlwaysRestart1(t *testing.T) {
 
 	sup := NewSupervisor()
 
-	child, _ := NewChild(ALWAYS_RESTART, LoopRun, 5, ch)
+	child, _ := NewChild(ALWAYS_RESTART, loopRun, 5, ch)
 
 	sup.AddChild(&child)
 
@@ -68,7 +68,7 @@ func TestSupAlwaysRestart2(t *testing.T) {
 
 	sup := NewSupervisor()
 
-	child, _ := NewChild(ALWAYS_RESTART, LoopRunWithPanic, 5, ch)
+	child, _ := NewChild(ALWAYS_RESTART, loopRunWithPanic, 5, ch)
 
 	sup.AddChild(&child)
 
@@ -81,7 +81,7 @@ l:
 			if counter > 3 {
 				break l
 			}
-		case <-time.After(3 * time.Second):
+		case <-time.After(time.Second):
 			t.Error("timed out")
 		}
 	}
@@ -92,7 +92,7 @@ func TestSupNormalRestart1(t *testing.T) {
 
 	sup := NewSupervisor()
 
-	child, _ := NewChild(ERROR_RESTART, LoopRun, 5, ch)
+	child, _ := NewChild(ERROR_RESTART, loopRun, 5, ch)
 
 	sup.AddChild(&child)
 
@@ -103,7 +103,7 @@ l:
 		case <-ch:
 			counter++
 			if counter > 1 {
-				t.Error("unexpected, child was restarted in ERROR_RESTART strategy, fun run sucessful")
+				t.Error("unexpected, child was restarted (task done) in ERROR_RESTART strategy")
 			}
 		case <-time.After(time.Second):
 			break l
@@ -116,7 +116,7 @@ func TestSupNormalRestart2(t *testing.T) {
 
 	sup := NewSupervisor()
 
-	child, _ := NewChild(ERROR_RESTART, LoopRunWithPanic, 5, ch)
+	child, _ := NewChild(ERROR_RESTART, loopRunWithPanic, 5, ch)
 
 	sup.AddChild(&child)
 
@@ -135,13 +135,30 @@ l:
 	}
 }
 
+func TestSupNoRestart(t *testing.T) {
+	sup := NewSupervisor()
+
+	sup.NewChild(ALWAYS_RESTART, simpleLoop, 3)
+	sup.NewChild(NO_RESTART, simpleLoop, 3)
+
+	time.Sleep(time.Millisecond * 100)
+
+	_, _, stopped, _ := sup.Stats()
+
+	if stopped != 1 {
+		t.Error("stop supervisor failed")
+	}
+
+	sup.Stop()
+}
+
 func TestSupStop(t *testing.T) {
 	ch := make(chan int)
 
 	sup := NewSupervisor()
 
-	sup.NewChild(ALWAYS_RESTART, LoopRun, 3, ch)
-	sup.NewChild(ALWAYS_RESTART, LoopRun, 3, ch)
+	sup.NewChild(ALWAYS_RESTART, loopRun, 3, ch)
+	sup.NewChild(ALWAYS_RESTART, loopRun, 3, ch)
 
 	counter := 0
 l:
@@ -163,32 +180,53 @@ l2:
 		}
 	}
 
-	for _, child := range sup.children {
-		if child.canRun() {
-			t.Error("stop supervisor failed")
-			break
-		}
+	total, _, stopped, _ := sup.Stats()
+
+	if total != stopped {
+		t.Error("stop supervisor failed")
 	}
+
+	sup.Stop()
+}
+
+func TestSupStopChild(t *testing.T) {
+	sup := NewSupervisor()
+
+	sup.NewChild(ALWAYS_RESTART, simpleLoop, 3)
+	id, _ := sup.NewChild(ALWAYS_RESTART, simpleLoop, 3)
+
+	time.Sleep(time.Millisecond)
+
+	sup.StopChild(id)
+
+	time.Sleep(time.Millisecond * 100)
+
+	_, _, stopped, _ := sup.Stats()
+
+	if stopped != 1 {
+		t.Error("stop supervisor failed")
+	}
+
 }
 
 func TestSupMultiWorkers(t *testing.T) {
 	sup := NewSupervisor()
 
 	for i := 0; i < 100; i++ {
-		sup.NewChild(ALWAYS_RESTART, SimpleLoopWithPanic, i)
+		sup.NewChild(ALWAYS_RESTART, simpleLoopWithPanic, i)
 	}
 
 	for i := 0; i < 100; i++ {
-		sup.NewChild(ERROR_RESTART, SimpleLoop, i)
+		sup.NewChild(ERROR_RESTART, simpleLoop, i)
 	}
 
 	time.Sleep(2 * time.Second)
 
-	running, stopped, restarting := sup.Stats()
+	total, running, stopped, restarting := sup.Stats()
 
 	sup.Stop()
 
-	fmt.Printf("Running: %d, Stopped: %d, Restarting: %d\n", running, stopped, restarting)
+	fmt.Printf("Total: %d, Running: %d, Stopped: %d, Restarting: %d\n", total, running, stopped, restarting)
 
 	if stopped != 100 || restarting+running != 100 {
 		t.Error("has children status failed")

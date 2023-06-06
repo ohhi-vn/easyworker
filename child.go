@@ -3,7 +3,6 @@ package easyworker
 import (
 	"fmt"
 	"log"
-	"reflect"
 	"sync/atomic"
 )
 
@@ -20,11 +19,19 @@ const (
 
 const (
 	iCHILD_PANIC = iota
-	iCHILD_DONE
-	iCHILD_RUNNING
-	iCHILD_RESTARTING
-	iCHILD_STOPPED
-	iCHILD_FORCE_QUIT
+	iCHILD_TASK_DONE
+
+	// Child is running task.
+	RUNNING = iota
+
+	// Child is restarting.
+	RESTARTING
+
+	// Child is stopped.
+	STOPPED
+
+	// Child is force to quit. In this state child wait for finish task before quit.
+	FORCE_QUIT
 )
 
 var (
@@ -39,7 +46,10 @@ type Child struct {
 	id           int
 	restart_type int
 	cmdCh        chan msg
-	status       atomic.Int64
+
+	status    atomic.Int64
+	restarted atomic.Int64
+	failed    atomic.Int64
 
 	fun    any
 	params []any
@@ -69,6 +79,13 @@ func NewChild(restart int, fun any, params ...any) (ret Child, retErr error) {
 }
 
 /*
+Get child's id.
+*/
+func (c *Child) Id() int {
+	return c.id
+}
+
+/*
 Start goroutine to execute task.
 */
 func (c *Child) run() {
@@ -82,80 +99,96 @@ func (c *Child) run_task() {
 	defer func() {
 		msg := msg{
 			id:      c.id,
-			msgType: iCHILD_DONE,
+			msgType: iCHILD_TASK_DONE,
 		}
+
+		// catch if panic by child code.
 		if r := recover(); r != nil {
 			log.Println(c.id, ", worker was panic, ", r)
 			msg.msgType = iCHILD_PANIC
 			msg.data = r
+			c.incFailed()
 		} else {
-			c.updateStatus(iCHILD_STOPPED)
+			c.updateStatus(STOPPED)
 		}
 
 		c.cmdCh <- msg
 	}()
 
-	var (
-		ret reflect.Value
-		err error
-	)
+	var err error
 
-	c.updateStatus(iCHILD_RUNNING)
+	c.updateStatus(RUNNING)
 
 l:
 	for {
-		if c.getStatus() == iCHILD_FORCE_QUIT {
-			log.Println(c.id, "force stop")
-			break l
-		}
-
 		// call user define function.
-		ret, err = invokeFun(c.fun, c.params...)
+		_, err = invokeFun(c.fun, c.params...)
+
+		if err != nil {
+			c.incFailed()
+			log.Println(c.id, "call user function failed, reason:", err)
+		}
 
 		switch c.restart_type {
 		case ALWAYS_RESTART:
-			if err != nil {
-				log.Println(c.id, "failed, reason:", err)
+			if c.getState() == FORCE_QUIT {
+				break l
 			}
-			log.Println(c.id, "child re-run")
 		case ERROR_RESTART:
-			if err == nil {
+			if err == nil || c.getState() == FORCE_QUIT {
 				log.Println(c.id, "done, child no re-run")
 				break l
-			} else {
-				log.Println(c.id, "failed, child re-run, reason:", err)
 			}
 		case NO_RESTART:
-			if err != nil {
-				log.Println(c.id, "failed, no re-run, reason:", err)
-				break l
-			}
+			// always exit.
+			break l
 		}
 
-	}
-
-	if err != nil {
-		log.Println(c.id, ", call function failed, error: ", err)
-	} else {
-		log.Println(c.id, ", function return ", ret)
+		c.incRestarted()
 	}
 }
 
 func (c *Child) stop() {
-	log.Println(c.id, "force stop...")
-	c.updateStatus(iCHILD_FORCE_QUIT)
+	log.Println(c.id, "force stop")
+	c.updateStatus(FORCE_QUIT)
 }
 
 func (c *Child) updateStatus(newStatus int) {
 	c.status.Store(int64(newStatus))
-	log.Println(c.id, "status after set", c.getStatus())
 }
 
-func (c *Child) getStatus() int {
-	return int(c.status.Load())
+func (c *Child) getState() int64 {
+	return c.status.Load()
 }
 
 func (c *Child) canRun() bool {
 
-	return int(c.status.Load()) != iCHILD_FORCE_QUIT
+	return int(c.status.Load()) != FORCE_QUIT
+}
+
+func (c *Child) incRestarted() {
+	c.restarted.Store(c.restarted.Add(1))
+}
+
+func (c *Child) incFailed() {
+	c.failed.Store(c.failed.Add(1))
+}
+
+func (c *Child) getRestarted() int64 {
+	return c.restarted.Load()
+}
+
+func (c *Child) getFailed() int64 {
+	return c.failed.Load()
+}
+
+/*
+Return current status & statistic of Child.
+*/
+func (c *Child) GetStats() (status int64, restarted int64, failed int64) {
+	status = c.getState()
+	restarted = c.getRestarted()
+	failed = c.getFailed()
+
+	return
 }

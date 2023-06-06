@@ -6,7 +6,7 @@ import (
 )
 
 func TestNoTask(t *testing.T) {
-	config := defaultConfig(Add)
+	config := defaultConfig(add)
 
 	eWorker, _ := NewTask(config)
 
@@ -17,7 +17,7 @@ func TestNoTask(t *testing.T) {
 }
 
 func TestTaskList1(t *testing.T) {
-	eWorker, err := NewTask(defaultConfig(AddWithPanic))
+	eWorker, err := NewTask(defaultConfig(addWithPanic))
 	if err != nil {
 		t.Error("cannot create EasyWorker, ", err)
 		return
@@ -35,7 +35,7 @@ func TestTaskList1(t *testing.T) {
 }
 
 func TestTaskList2(t *testing.T) {
-	eWorker, err := NewTask(defaultConfig(Sum))
+	eWorker, err := NewTask(defaultConfig(sum))
 	if err != nil {
 		t.Error("cannot create EasyWorker, ", err)
 		return

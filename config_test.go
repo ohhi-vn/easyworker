@@ -5,18 +5,18 @@ import (
 	"testing"
 )
 
-func Add(a int, b int) int {
+func add(a int, b int) int {
 	return a + b
 }
 
-func AddWithPanic(a int, b int) int {
+func addWithPanic(a int, b int) int {
 	if a%3 == 0 {
 		panic("panic from user func")
 	}
 	return a + b
 }
 
-func Sum(a ...int) int {
+func sum(a ...int) int {
 	sum := 0
 	for _, i := range a {
 		sum += i
@@ -29,7 +29,7 @@ func defaultConfig(fun any) Config {
 	return config
 }
 
-func StrId(a int, suffix string) string {
+func strId(a int, suffix string) string {
 	if a%3 == 0 {
 		panic("panic from user func")
 	}
@@ -45,7 +45,7 @@ func TestIsNotFunc(t *testing.T) {
 }
 
 func TestIncorrectNumWorker(t *testing.T) {
-	_, err := NewConfig(Add, 0, 0, 0)
+	_, err := NewConfig(add, 0, 0, 0)
 
 	if err == nil {
 		t.Error("incorrect number of worker is passed, ", err)
@@ -53,7 +53,7 @@ func TestIncorrectNumWorker(t *testing.T) {
 }
 
 func TestIncorrectNumRetry(t *testing.T) {
-	_, err := NewConfig(Add, 0, -1, 0)
+	_, err := NewConfig(add, 0, -1, 0)
 	if err == nil {
 		t.Error("incorrect number of retry is passed, ", err)
 	}

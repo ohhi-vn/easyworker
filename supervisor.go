@@ -40,13 +40,13 @@ func NewSupervisor() Supervisor {
 /*
 Add directly child to a supervisor.
 */
-func (s *Supervisor) NewChild(restart int, fun any, params ...any) (retErr error) {
+func (s *Supervisor) NewChild(restart int, fun any, params ...any) (id int, err error) {
 	if restart < ALWAYS_RESTART || restart > NO_RESTART {
-		retErr = fmt.Errorf("in correct restart type, input: %d", restart)
+		err = fmt.Errorf("in correct restart type, input: %d", restart)
 		return
 	}
 
-	if retErr = verifyFunc(fun); retErr != nil {
+	if err = verifyFunc(fun); err != nil {
 		return
 	}
 
@@ -64,6 +64,7 @@ func (s *Supervisor) NewChild(restart int, fun any, params ...any) (retErr error
 
 	child.run()
 
+	id = child.id
 	return
 }
 
@@ -79,7 +80,16 @@ func (s *Supervisor) AddChild(child *Child) {
 }
 
 /*
-make a goroutine to handle event from children.
+Get child from id.
+Return nil if id isn't existed.
+*/
+func (s *Supervisor) GetChild(id int) *Child {
+	child := s.children[id]
+	return child
+}
+
+/*
+Make a goroutine to handle event from children. Restart children if needed.
 */
 func (s *Supervisor) start() {
 	go func() {
@@ -92,12 +102,12 @@ func (s *Supervisor) start() {
 			case iCHILD_PANIC:
 				child = s.children[event.id]
 				if child.canRun() && (child.restart_type == ALWAYS_RESTART || child.restart_type == ERROR_RESTART) {
-					child.updateStatus(iCHILD_RESTARTING)
+					child.updateStatus(RESTARTING)
 					log.Println("restarting child:", child.id)
 					child.run()
 				} else {
 					log.Println("child:", child.id, "stopped")
-					child.updateStatus(iCHILD_STOPPED)
+					child.updateStatus(STOPPED)
 				}
 
 			}
@@ -107,7 +117,8 @@ func (s *Supervisor) start() {
 
 /*
 Supervisor will send stop signal to children.
-Child after process your function will check the signal and stop.
+Children after process your function will check the signal and stop.
+In this case, ALWAYS_RESTART & ERROR_RESTART will be ignored.
 */
 func (s *Supervisor) Stop() {
 	for _, child := range s.children {
@@ -115,12 +126,31 @@ func (s *Supervisor) Stop() {
 	}
 }
 
-func (s *Supervisor) Stats() (running, stopped, restarting int) {
+/*
+Supervisor will send stop signal to a child.
+Child after process your function will check the signal and stop.
+In this case, ALWAYS_RESTART & ERROR_RESTART will be ignored.
+*/
+func (s *Supervisor) StopChild(id int) {
+	if child, existed := s.children[id]; existed {
+		child.stop()
+	}
+}
+
+/*
+Return statistics of supervisor.
+total: Number of children in supervisor.
+running: Number of children are running.
+stopped: Number of children are stopped.
+restarting: Number of children are restarting.
+*/
+func (s *Supervisor) Stats() (total, running, stopped, restarting int) {
+	total = len(s.children)
 	for _, child := range s.children {
-		switch child.getStatus() {
-		case iCHILD_RUNNING:
+		switch child.getState() {
+		case RUNNING:
 			running++
-		case iCHILD_RESTARTING:
+		case RESTARTING:
 			restarting++
 		default:
 			stopped++
