@@ -73,7 +73,7 @@ func (p *EasyStream) Run() (retErr error) {
 	// Start workers
 	for i := 0; i < p.config.worker; i++ {
 		opt := &worker{
-			id:         i,
+			id:         int64(i),
 			fun:        p.config.fun,
 			cmd:        make(chan msg),
 			resultCh:   resultCh,

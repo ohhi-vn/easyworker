@@ -169,6 +169,33 @@ func parallelTasks() {
 }
 ```
 
+Supervisor support context by create supervisor by function `NewSupervisorWithContext`.
+In case supervisor with context, the first parameter of user function will be context.
+Context will include supervisor's id and child's id.
+
+User code can get with key:
+
+* CTX_SUP_ID for supervisor's id
+* CTX_CHILD_ID for child's id
+
+Example:
+
+```go
+loopWithContext = func(ctx context.Context, a int) {
+	supId := ctx.Value(easyworker.CTX_SUP_ID)
+	childId := ctx.Value(easyworker.CTX_CHILD_ID)
+
+	for i := 0; i < a; i++ {
+		fmt.Println("Sup: ", supId, "Child:", childId, "counter:", i)
+		time.Sleep(time.Millisecond)
+	}
+}
+
+sup := NewSupervisorWithContext(context.Background())
+
+sup.NewChild(NO_RESTART, loopWithContext, 10)
+```
+
 ### EasyStream
 
 This type is used for streaming type.

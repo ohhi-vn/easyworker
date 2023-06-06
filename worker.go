@@ -29,7 +29,7 @@ type msg struct {
 // worker's information.
 type worker struct {
 	// worker's id
-	id int
+	id int64
 
 	// retry time, define by user.
 	retryTimes int
@@ -59,7 +59,7 @@ func (w *worker) run() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println(w.id, ", worker was panic, ", r)
-			w.resultCh <- msg{id: w.id, msgType: iFATAL_ERROR, data: r}
+			w.resultCh <- msg{id: int(w.id), msgType: iFATAL_ERROR, data: r}
 		}
 	}()
 

@@ -1,6 +1,7 @@
 package easyworker
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync/atomic"
@@ -36,14 +37,18 @@ const (
 
 var (
 	// use to store last id of child. id is auto_increment.
-	childLastId int
+	childLastId atomic.Int64
 )
+
+func getNewChildId() int64 {
+	return childLastId.Add(1)
+}
 
 /*
 A child struct that hold information a bout task, restart strategy.
 */
 type Child struct {
-	id           int
+	id           int64
 	restart_type int
 	cmdCh        chan msg
 
@@ -53,6 +58,7 @@ type Child struct {
 
 	fun    any
 	params []any
+	ctx    context.Context
 }
 
 /*
@@ -68,10 +74,10 @@ func NewChild(restart int, fun any, params ...any) (ret Child, retErr error) {
 		return
 	}
 
-	childLastId++
+	childId := getNewChildId()
 
 	return Child{
-		id:           childLastId,
+		id:           childId,
 		restart_type: restart,
 		fun:          fun,
 		params:       params,
@@ -81,7 +87,7 @@ func NewChild(restart int, fun any, params ...any) (ret Child, retErr error) {
 /*
 Get child's id.
 */
-func (c *Child) Id() int {
+func (c *Child) Id() int64 {
 	return c.id
 }
 
@@ -98,7 +104,7 @@ Run task.
 func (c *Child) run_task() {
 	defer func() {
 		msg := msg{
-			id:      c.id,
+			id:      int(c.id),
 			msgType: iCHILD_TASK_DONE,
 		}
 

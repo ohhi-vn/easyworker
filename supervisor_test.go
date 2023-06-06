@@ -1,7 +1,9 @@
 package easyworker
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 )
@@ -10,6 +12,13 @@ func simpleLoop(a int) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Millisecond)
 	}
+}
+
+func simpleLoopNoArg() {
+	for i := 0; i < 50; i++ {
+		time.Sleep(time.Millisecond)
+	}
+
 }
 
 func loopRun(a int, testSupporter chan int) {
@@ -25,6 +34,24 @@ func simpleLoopWithPanic(a int) {
 		if i == 1 {
 			panic("test loop with panic")
 		}
+	}
+}
+
+func simpleLoopWithContext(ctx context.Context, a int) {
+	if supId := ctx.Value(CTX_SUP_ID); supId != nil {
+		log.Println("Id of supervisor get from user function:", supId)
+	} else {
+		panic("context failed")
+	}
+
+	if childId := ctx.Value(CTX_CHILD_ID); childId != nil {
+		log.Println("Id of child get from user function:", childId)
+	} else {
+		panic("context failed")
+	}
+
+	for i := 0; i < a; i++ {
+		time.Sleep(time.Millisecond)
 	}
 }
 
@@ -152,6 +179,22 @@ func TestSupNoRestart(t *testing.T) {
 	sup.Stop()
 }
 
+func TestSupFunNoArg(t *testing.T) {
+	sup := NewSupervisor()
+
+	sup.NewChild(ALWAYS_RESTART, simpleLoopNoArg)
+
+	time.Sleep(time.Millisecond)
+
+	_, running, _, _ := sup.Stats()
+
+	if running != 1 {
+		t.Error("start fun no arg failed")
+	}
+
+	sup.Stop()
+}
+
 func TestSupStop(t *testing.T) {
 	ch := make(chan int)
 
@@ -231,4 +274,14 @@ func TestSupMultiWorkers(t *testing.T) {
 	if stopped != 100 || restarting+running != 100 {
 		t.Error("has children status failed")
 	}
+}
+
+func TestSupContext(t *testing.T) {
+	sup := NewSupervisorWithContext(context.Background())
+
+	sup.NewChild(NO_RESTART, simpleLoopWithContext, 3)
+
+	time.Sleep(time.Millisecond * 100)
+
+	sup.Stop()
 }
