@@ -9,7 +9,7 @@ var (
 
 /*
 Config is shared between EasyTask & EasyStream struct.
-It's store options that input by user.
+It's store options input by user.
 */
 type Config struct {
 	// fun stores function add by user.

@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 )
 
-type SupervisorMan struct {
+type supervisorMan struct {
 	lock    sync.RWMutex
 	listSup map[int64]*Supervisor
 }
@@ -13,7 +13,7 @@ type SupervisorMan struct {
 var (
 	lastSupId atomic.Int64
 
-	listSup SupervisorMan = SupervisorMan{
+	listSup supervisorMan = supervisorMan{
 		listSup: make(map[int64]*Supervisor),
 	}
 )
@@ -37,21 +37,21 @@ func RemoveSupervisor(id int64) {
 	listSup.remove(id)
 }
 
-func (sm *SupervisorMan) add(sup *Supervisor) {
+func (sm *supervisorMan) add(sup *Supervisor) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
 	sm.listSup[sup.id] = sup
 }
 
-func (sm *SupervisorMan) remove(id int64) {
+func (sm *supervisorMan) remove(id int64) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
 	delete(sm.listSup, id)
 }
 
-func (sm *SupervisorMan) get(id int64) *Supervisor {
+func (sm *supervisorMan) get(id int64) *Supervisor {
 	sm.lock.RLock()
 	defer sm.lock.RUnlock()
 

@@ -32,6 +32,7 @@ type EasyStream struct {
 Make new EasyStream.
 Config is made before make new EasyTask.
 
+config: instance of Config.
 taskCh: channel EasyStream will wait & get task.
 resultCh: channel EastyStream will send out result of task.
 
@@ -55,7 +56,7 @@ func NewStream(config Config, taskCh chan []any, resultCh chan any) (ret EasyStr
 }
 
 /*
-Run func to process continuously.
+Run func to process stream continuously.
 
 Example:
 
@@ -131,7 +132,8 @@ func (p *EasyStream) Run() (retErr error) {
 }
 
 /*
-Stop all workers.
+Stop all workers in stream.
+Time to stop depend time user function return.
 */
 func (p *EasyStream) Stop() error {
 	if p.cmdCh != nil {

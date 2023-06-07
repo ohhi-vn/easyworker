@@ -69,13 +69,26 @@ Currently, child has three type of restart strategy:
 
 Children will be started after they are added to supervisor.
 
-In restart case, child will re-use last parameters (if task don't change it) of task.
+In restart case, children will re-use last parameters (if task don't change it) of task.
+
+Supervisor -> Child -> call user functions
+
+Basic supervisor's flow:
+
+```mermaid
+graph LR
+User(User code) -->|init supervisor & children|Sup(Supervisor 1)
+    Sup-->|add child & run|Child1(Child 1 - Task 1)
+    Sup-->|add child & run|Child2(Child 2 - Task 2)
+    Sup-->|add child & run|Childn(Child N - Task N)
+```
+(install extension support mermaid to view flow)
 
 supervisor example:
 
 ```go
 // example function need to run in child.
-loop = func(a int) {
+loop := func(a int) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Second)
 		fmt.Println("loop at", i)
@@ -83,8 +96,8 @@ loop = func(a int) {
 	fmt.Println("Loop exit...")
 }
 
-// example function run in child. It will panic if counter > 3
-LoopWithPanic = func(a int, panicString string) {
+// example function run in child. It will panic if counter > 3.
+LoopWithPanic := func(a int, panicString string) {
 	for i := 0; i < a; i++ {
 		time.Sleep(time.Second)
 		fmt.Println("loop at", i)
@@ -96,7 +109,7 @@ LoopWithPanic = func(a int, panicString string) {
 	fmt.Println("LoopWithPanic exit...")
 }
 
-// create a supervisor
+// create a supervisor.
 sup := easyworker.NewSupervisor()
 
 // add direct child to supervisor.
@@ -104,7 +117,7 @@ sup.NewChild(easyworker.ERROR_RESTART, Loop, 5)
 sup.NewChild(easyworker.NO_RESTART, LoopWithPanic, 5, "test panic")
 
 
-// create a child
+// create a child.
 child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopWithPanic, 5, "other panic")
 
 // add exists child.
@@ -133,8 +146,11 @@ To get child please call `GetChild` method of supervisor.
 Example:
 
 ```go
-loopWithContext = func(ctx context.Context, a int) {
+// basic func with context.
+loopWithContext := func(ctx context.Context, a int) {
+	// get supervisor's id.
 	supId := ctx.Value(easyworker.CTX_SUP_ID)
+	// get child's id.
 	childId := ctx.Value(easyworker.CTX_CHILD_ID)
 
 	for i := 0; i < a; i++ {
@@ -143,9 +159,11 @@ loopWithContext = func(ctx context.Context, a int) {
 	}
 }
 
+// create supervisor with context.
 sup := NewSupervisorWithContext(context.Background())
 
-sup.NewChild(NO_RESTART, loopWithContext, 10)
+// add child.
+sup.NewChild(easyworker.NO_RESTART, loopWithContext, 10)
 ```
 
 For other APIs please go to [pkg.go](https://pkg.go.dev/github.com/manhvu/easyworker)
@@ -161,6 +179,7 @@ In retry case, worker will re-use last parameters of task.
 EasyTask example:
 
 ```go
+// simple task.
 func sum(a ...int) (ret int) {
 	for _, i := range a {
 		ret += i
@@ -169,27 +188,27 @@ func sum(a ...int) (ret int) {
 }
 
 func parallelTasks() {
-	// number of workers
+	// number of workers.
 	numWorkers := 3
 
-	// retry times
+	// retry times.
 	retryTimes := 0
 
-	// sleep time before re-run
+	// sleep time before re-run.
 	retrySleep := 0
 
-	// new config for EasyTask
+	// new config for EasyTask.
 	config, _ := easyworker.NewConfig(sum, numWorkers, retryTimes, retrySleep)
 
-	// new EasyTask
+	// new EasyTask.
 	task, _ := easyworker.NewTask(config)
 
-	// add tasks
+	// add tasks.
 	myTask.AddTask(1, 2, 3)
 	myTask.AddTask(3, 4, 5, 6, 7)
 	myTask.AddTask(11, 22)
 
-	// start workers
+	// start workers.
 	r, e := myTask.Run()
 
 	if e != nil {
@@ -220,13 +239,13 @@ fnStr = func(a int, suffix string) string {
 	return fmt.Sprintf("%d_%s", a, suffix)
 }
 
-// input channel
+// input channel.
 inCh := make(chan []any)
 
-// result channel
+// result channel.
 outCh := make(chan any)
 
-// number of workers = number of cpu cores (logical cores)
+// number of workers = number of cpu cores (logical cores).
 config, _ := easyworker.NewConfig(fnStr, easyworker.DefaultNumWorker(), 3, 1000)
 
 // test with stream.
@@ -255,7 +274,7 @@ go func() {
 
 //...
 
-// stop all worker
+// stop all worker.
 myStream.Stop()
 ```
 
