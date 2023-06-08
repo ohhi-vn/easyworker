@@ -291,8 +291,16 @@ Signal is a struct with reference id and kind of end (failed, done).
 Example 1:
 
 ```go
+loop := func(a int) {
+	for i := 0; i < a; i++ {
+		time.Sleep(time.Second)
+		fmt.Println("loop at", i)
+	}
+	fmt.Println("Loop exit...")
+}
+
 // create go task.
-g,_ := easyworker.NewGo(loopRun2, 5)
+g,_ := easyworker.NewGo(loop, 5)
 
 go func() {
 	// get a monitor to g.
@@ -312,7 +320,7 @@ Example 2:
 
 ```go
 // create go task.
-g,_ := easyworker.NewGo(loopRun2, 5)
+g,_ := easyworker.NewGo(loopRun, 5)
 
 // get a monitor to g.
 _, ch := g.Monitor()
@@ -324,7 +332,7 @@ g.Run()
 sig := <-ch
 
 if sig.Signal != easyWorker.SIGNAL_DONE {
-	// remove monitor to.
+	// remove monitor link to Go.
 	g.Demonitor()
 
 	// retry one more.

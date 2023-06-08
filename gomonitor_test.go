@@ -6,6 +6,28 @@ import (
 	"time"
 )
 
+func TestGoRunNoArg(t *testing.T) {
+	g, err := NewGo(simpleLoopNoArg)
+
+	if err != nil {
+		t.Error("create go failed, ", err)
+		return
+	}
+
+	refId, ch := g.Monitor()
+
+	g.Run()
+
+	select {
+	case sig := <-ch:
+		if refId != sig.RefId || SIGNAL_DONE != sig.Signal {
+			t.Error("return signal incorrect")
+		}
+	case <-time.After(time.Second):
+		t.Error("timed out")
+	}
+}
+
 func TestGoRun(t *testing.T) {
 	g, err := NewGo(loopRun2, 5)
 
