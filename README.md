@@ -82,6 +82,7 @@ User(User code) -->|init supervisor & children|Sup(Supervisor 1)
     Sup-->|add child & run|Child2(Child 2 - Task 2)
     Sup-->|add child & run|Childn(Child N - Task N)
 ```
+
 (install extension support mermaid to view flow)
 
 supervisor example:
@@ -89,41 +90,42 @@ supervisor example:
 ```go
 // example function need to run in child.
 loop := func(a int) {
-	for i := 0; i < a; i++ {
-		time.Sleep(time.Second)
-		fmt.Println("loop at", i)
-	}
-	fmt.Println("Loop exit...")
+ for i := 0; i < a; i++ {
+  time.Sleep(time.Second)
+  fmt.Println("loop at", i)
+ }
+ fmt.Println("loop exit...")
 }
 
 // example function run in child. It will panic if counter > 3.
-LoopWithPanic := func(a int, panicString string) {
-	for i := 0; i < a; i++ {
-		time.Sleep(time.Second)
-		fmt.Println("loop at", i)
-		if i > 3 {
-			panic(panicString)
-		}
-	}
+loopWithPanic := func(a int, panicString string) {
+ for i := 0; i < a; i++ {
+  time.Sleep(time.Second)
+  fmt.Println("loop at", i)
+  if i > 3 {
+   panic(panicString)
+  }
+ }
     // maybe you won't see this.
-	fmt.Println("LoopWithPanic exit...")
+ fmt.Println("loopWithPanic exit...")
 }
 
 // create a supervisor.
 sup := easyworker.NewSupervisor()
 
 // add direct child to supervisor.
-sup.NewChild(easyworker.ERROR_RESTART, Loop, 5)
-sup.NewChild(easyworker.NO_RESTART, LoopWithPanic, 5, "test panic")
+sup.NewChild(easyworker.ERROR_RESTART, loop, 5)
+sup.NewChild(easyworker.NO_RESTART, loopWithPanic, 5, "test panic")
 
 
 // create a child.
-child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, LoopWithPanic, 5, "other panic")
+child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, loopWithPanic, 5, "other panic")
 
 // add exists child.
 sup.AddChild(&child)
 
-//...
+// or do something you want.
+time.Sleep(15 * time.Second)
 
 // stop all worker.
 // this function depends how long fun return.
@@ -148,15 +150,15 @@ Example:
 ```go
 // basic func with context.
 loopWithContext := func(ctx context.Context, a int) {
-	// get supervisor's id.
-	supId := ctx.Value(easyworker.CTX_SUP_ID)
-	// get child's id.
-	childId := ctx.Value(easyworker.CTX_CHILD_ID)
+ // get supervisor's id.
+ supId := ctx.Value(easyworker.CTX_SUP_ID)
+ // get child's id.
+ childId := ctx.Value(easyworker.CTX_CHILD_ID)
 
-	for i := 0; i < a; i++ {
-		fmt.Println("Sup: ", supId, "Child:", childId, "counter:", i)
-		time.Sleep(time.Millisecond)
-	}
+ for i := 0; i < a; i++ {
+  fmt.Println("Sup: ", supId, "Child:", childId, "counter:", i)
+  time.Sleep(time.Millisecond)
+ }
 }
 
 // create supervisor with context.
@@ -181,41 +183,41 @@ EasyTask example:
 ```go
 // simple task.
 func sum(a ...int) (ret int) {
-	for _, i := range a {
-		ret += i
-	}
-	return ret
+ for _, i := range a {
+  ret += i
+ }
+ return ret
 }
 
 func parallelTasks() {
-	// number of workers.
-	numWorkers := 3
+ // number of workers.
+ numWorkers := 3
 
-	// retry times.
-	retryTimes := 0
+ // retry times.
+ retryTimes := 0
 
-	// sleep time before re-run.
-	retrySleep := 0
+ // sleep time before re-run.
+ retrySleep := 0
 
-	// new config for EasyTask.
-	config, _ := easyworker.NewConfig(sum, numWorkers, retryTimes, retrySleep)
+ // new config for EasyTask.
+ config, _ := easyworker.NewConfig(sum, numWorkers, retryTimes, retrySleep)
 
-	// new EasyTask.
-	task, _ := easyworker.NewTask(config)
+ // new EasyTask.
+ task, _ := easyworker.NewTask(config)
 
-	// add tasks.
-	myTask.AddTask(1, 2, 3)
-	myTask.AddTask(3, 4, 5, 6, 7)
-	myTask.AddTask(11, 22)
+ // add tasks.
+ myTask.AddTask(1, 2, 3)
+ myTask.AddTask(3, 4, 5, 6, 7)
+ myTask.AddTask(11, 22)
 
-	// start workers.
-	r, e := myTask.Run()
+ // start workers and get results.
+ r, e := myTask.Run()
 
-	if e != nil {
-		t.Error("run task failed, ", e)
-	} else {
-		fmt.Println("task result:", r)
-	}
+ if e != nil {
+  t.Error("run task failed, ", e)
+ } else {
+  fmt.Println("task result:", r)
+ }
 }
 ```
 
@@ -233,10 +235,10 @@ EasyStream example:
 ```go
 // fun will do task
 fnStr = func(a int, suffix string) string {
-	if a%3 == 0 {
-		panic("panic from user func")
-	}
-	return fmt.Sprintf("%d_%s", a, suffix)
+ if a%3 == 0 {
+  panic("panic from user func")
+ }
+ return fmt.Sprintf("%d_%s", a, suffix)
 }
 
 // input channel.
@@ -272,7 +274,7 @@ go func() {
 }()
 
 
-//...
+// do something.
 
 // stop all worker.
 myStream.Stop()
@@ -292,24 +294,24 @@ Example 1:
 
 ```go
 loop := func(a int) {
-	for i := 0; i < a; i++ {
-		time.Sleep(time.Second)
-		fmt.Println("loop at", i)
-	}
-	fmt.Println("Loop exit...")
+ for i := 0; i < a; i++ {
+  time.Sleep(time.Second)
+  fmt.Println("loop at", i)
+ }
+ fmt.Println("Loop exit...")
 }
 
 // create go task.
 g,_ := easyworker.NewGo(loop, 5)
 
 go func() {
-	// get a monitor to g.
-	refId, ch := g.Monitor()
+ // get a monitor to g.
+ refId, ch := g.Monitor()
 
-	// get a signal when g done/failed.
-	sig := <-ch
+ // get a signal when g done/failed.
+ sig := <-ch
 
-	fmt.Println("ref:", refId, "ok")
+ fmt.Println("ref:", refId, "ok")
 }()
 
 // start Go task.
@@ -332,10 +334,10 @@ g.Run()
 sig := <-ch
 
 if sig.Signal != easyWorker.SIGNAL_DONE {
-	// remove monitor link to Go.
-	g.Demonitor()
+ // remove monitor link to Go.
+ g.Demonitor()
 
-	// retry one more.
-	g.Run()
+ // retry one more.
+ g.Run()
 }
 ```
