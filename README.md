@@ -280,7 +280,7 @@ myStream.Stop()
 
 ### Monitor Go
 
-A wrapper for go routine for easy monitor when goroutine was panic or run task done.
+A wrapper for goroutine for easy monitor when goroutine was panic or run task done.
 
 `Monitor` function will return two params.
 First param is unique reference id.
@@ -288,7 +288,7 @@ Second param is channel that user can receive signal.
 
 Signal is a struct with reference id and kind of end (failed, done).
 
-Example:
+Example 1:
 
 ```go
 // create go task.
@@ -306,4 +306,28 @@ go func() {
 
 // start Go task.
 g.Run()
+```
+
+Example 2:
+
+```go
+// create go task.
+g,_ := easyworker.NewGo(loopRun2, 5)
+
+// get a monitor to g.
+_, ch := g.Monitor()
+
+// start Go task.
+g.Run()
+
+// task done
+sig := <-ch
+
+if sig.Signal != easyWorker.SIGNAL_DONE {
+	// remove monitor to.
+	g.Demonitor()
+
+	// retry one more.
+	g.Run()
+}
 ```

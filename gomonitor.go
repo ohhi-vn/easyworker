@@ -116,8 +116,6 @@ func (g *Go) pushSignal(msg GoSignal) {
 	for refId, ch := range g.panicListeners {
 		msg.RefId = refId
 		ch <- msg
-		close(ch)
-		delete(g.panicListeners, refId)
 	}
 }
 
@@ -163,6 +161,8 @@ func (g *Go) run_task() {
 	}()
 
 	var err error
+
+	//log.Println("Go run, params:", g.params)
 
 	// call user define function.
 	_, err = invokeFun(g.fun, g.params...)
