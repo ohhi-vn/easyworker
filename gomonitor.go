@@ -19,13 +19,14 @@ const (
 type GoSignal struct {
 	// Monitor reference id.
 	RefId int64
+
 	// Kind of signal (SIGNAL_DONE, SIGNAL_FAILED)
 	Signal int
 }
 
 type monitorChan chan GoSignal
 
-// A goroutine can be monitored.
+// A struct wrap goroutine to handle panic and can re-run easily.
 type Go struct {
 	lock sync.Mutex
 
@@ -46,7 +47,9 @@ func getNewRefId() int64 {
 }
 
 /*
-Create new Go.
+Create new Go struct.
+The first parameter is user function.
+The second parameter and more is parameter for parameter of user function.
 */
 func NewGo(fun any, params ...any) (ret *Go, retErr error) {
 	if retErr = verifyFunc(fun); retErr != nil {
@@ -65,6 +68,7 @@ func NewGo(fun any, params ...any) (ret *Go, retErr error) {
 
 /*
 Create Go and run.
+Same with function NewGo but run after create Go struct.
 */
 func NewGoAndRun(fun any, params ...any) (ret *Go, retErr error) {
 	ret, retErr = NewGo(fun, params...)

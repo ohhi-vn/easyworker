@@ -56,7 +56,7 @@ import "github.com/manhvu/easyworker"
 
 ## Use Cases
 
-### Supervisor
+### Supervisor model
 
 This is used for generic worker(child).
 Every children has a owner restart strategy.
@@ -70,6 +70,9 @@ Currently, child has three type of restart strategy:
 Children will be started after they are added to supervisor.
 
 In restart case, children will re-use last parameters (if task don't change it) of task.
+
+Child, doesn't return any value from task.
+You need add code to get value from task if you needed.
 
 Supervisor -> Child -> call user functions
 
@@ -178,6 +181,9 @@ Number of workers is number of goroutine will run tasks.
 
 In retry case, worker will re-use last parameters of task.
 
+Result of each task is a []any.
+You need to get true value from any(interface{}).
+
 EasyTask example:
 
 ```go
@@ -230,6 +236,9 @@ Number of workers is number of goroutines used for processing streaming task.
 
 In retry case, workers will re-use last parameters of task.
 
+Result of each task is a []any.
+You need to get true value from any(interface{}).
+
 EasyStream example:
 
 ```go
@@ -258,19 +267,19 @@ myStream.Run()
 
 // receive data from stream.
 go func() {
-    for {
-        r := <-outCh
-        fmt.Println("stream result: ", r)
-    }
+  for {
+    r := <-outCh
+    fmt.Println("stream result: ", r)
+  }
 }()
 
 // send data to stream.
 go func() {
-    for i := 0; i < 15; i++ {
-        input := []any{i, "hello"}
-        inCh <- input
-        fmt.Println("stream sent: ", input)
-    }
+  for i := 0; i < 15; i++ {
+    input := []any{i, "hello"}
+    inCh <- input
+    fmt.Println("stream sent: ", input)
+  }
 }()
 
 
@@ -289,6 +298,8 @@ First param is unique reference id.
 Second param is channel that user can receive signal.
 
 Signal is a struct with reference id and kind of end (failed, done).
+
+Go doesn't support return value, you need an other way to get if you neened.
 
 Example 1:
 

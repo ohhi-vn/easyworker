@@ -18,7 +18,6 @@ func simpleLoopNoArg() {
 	for i := 0; i < 50; i++ {
 		time.Sleep(time.Millisecond)
 	}
-
 }
 
 func loopRun(a int, testSupporter chan int) {

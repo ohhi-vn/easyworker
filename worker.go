@@ -2,7 +2,6 @@ package easyworker
 
 import (
 	"log"
-	"reflect"
 	"time"
 )
 
@@ -65,7 +64,7 @@ func (w *worker) run() {
 
 	var (
 		task msg
-		ret  reflect.Value
+		ret  []any
 		err  error
 	)
 

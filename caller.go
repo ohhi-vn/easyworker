@@ -9,7 +9,7 @@ import (
 /*
 call user's function througth reflect.
 */
-func invokeFun(fun any, args ...any) (ret reflect.Value, err error) {
+func invokeFun(fun any, args ...any) (ret []any, err error) {
 	// catch if panic by user code.
 	defer func() {
 		if r := recover(); r != nil {
@@ -24,10 +24,10 @@ func invokeFun(fun any, args ...any) (ret reflect.Value, err error) {
 	fnType := fn.Type()
 	numIn := fnType.NumIn()
 	if numIn > len(args) {
-		return reflect.ValueOf(nil), fmt.Errorf("function must have minimum %d params. Have %d", numIn, len(args))
+		return nil, fmt.Errorf("function must have minimum %d params. Have %d", numIn, len(args))
 	}
 	if numIn != len(args) && !fnType.IsVariadic() {
-		return reflect.ValueOf(nil), fmt.Errorf("func must have %d params. Have %d", numIn, len(args))
+		return nil, fmt.Errorf("func must have %d params. Have %d", numIn, len(args))
 	}
 	params := make([]reflect.Value, len(args))
 	for i := 0; i < len(args); i++ {
@@ -39,23 +39,25 @@ func invokeFun(fun any, args ...any) (ret reflect.Value, err error) {
 		}
 		argValue := reflect.ValueOf(args[i])
 		if !argValue.IsValid() {
-			return reflect.ValueOf(nil), fmt.Errorf("func Param[%d] must be %s. Have %s", i, inType, argValue.String())
+			return nil, fmt.Errorf("func Param[%d] must be %s. Have %s", i, inType, argValue.String())
 		}
 		argType := argValue.Type()
 		if argType.ConvertibleTo(inType) {
 			params[i] = argValue.Convert(inType)
 		} else {
-			return reflect.ValueOf(nil), fmt.Errorf("method Param[%d] must be %s. Have %s", i, inType, argType)
+			return nil, fmt.Errorf("method Param[%d] must be %s. Have %s", i, inType, argType)
 		}
 	}
 
 	result := fn.Call(params)
 
-	//log.Println("invoke result:", result)
+	ret = make([]any, len(result))
 
-	if len(result) > 0 {
-		ret = result[0]
+	for i, r := range result {
+		ret[i] = r.Interface()
 	}
+
+	//log.Println("invoke result:", result)
 
 	return ret, nil
 }
