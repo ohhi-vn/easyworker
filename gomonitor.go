@@ -216,7 +216,7 @@ func (g *Go) run_task() {
 Return state of Go.
 Kind of state:
   - RUNNING: Task is running.
-  - STOPPED: Stop by user. In this state user can run again.
+  - STOPPED: Stop by user. In this state user cannot run again.
   - STANDBY: Task is standby wait for start or just done task.
 */
 func (g *Go) State() int64 {
@@ -227,7 +227,7 @@ func (g *Go) State() int64 {
 Get result from last run.
 Result is slice of any.
 Length of slice is number of parameter return from user function.
-Cast type to get right value.
+Cast to right type for value.
 */
 func (g *Go) GetResult() []any {
 	g.lock.Lock()

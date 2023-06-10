@@ -9,7 +9,10 @@ import (
 type key int
 
 const (
+	// Use to get supervisor id from context.
 	CTX_SUP_ID key = iota
+
+	// Use to get child id from context.
 	CTX_CHILD_ID
 )
 
@@ -103,6 +106,7 @@ func (s *Supervisor) NewChild(restart int, fun any, params ...any) (id int64, er
 	s.children[child.id] = child
 	child.cmdCh = s.cmdCh
 
+	// start child to run task.
 	child.run()
 
 	id = child.id

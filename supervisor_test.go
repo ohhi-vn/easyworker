@@ -69,7 +69,7 @@ func TestSupAlwaysRestart1(t *testing.T) {
 
 	sup := NewSupervisor()
 
-	child, _ := NewChild(ALWAYS_RESTART, loopRun, 5, ch)
+	child, _ := NewChild(ALWAYS_RESTART, loopRun, 15, ch)
 
 	sup.AddChild(&child)
 
@@ -254,15 +254,17 @@ func TestSupStopChild(t *testing.T) {
 func TestSupMultiWorkers(t *testing.T) {
 	sup := NewSupervisor()
 
-	for i := 0; i < 100; i++ {
-		sup.NewChild(ALWAYS_RESTART, simpleLoopWithPanic, i)
+	num := 500
+
+	for i := 0; i < num; i++ {
+		sup.NewChild(ALWAYS_RESTART, simpleLoopWithPanic, 5)
 	}
 
-	for i := 0; i < 100; i++ {
-		sup.NewChild(ERROR_RESTART, simpleLoop, i)
+	for i := 0; i < num; i++ {
+		sup.NewChild(ERROR_RESTART, simpleLoop, 5)
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	total, running, stopped, restarting := sup.Stats()
 
@@ -270,7 +272,7 @@ func TestSupMultiWorkers(t *testing.T) {
 
 	fmt.Printf("Total: %d, Running: %d, Stopped: %d, Restarting: %d\n", total, running, stopped, restarting)
 
-	if stopped != 100 || restarting+running != 100 {
+	if stopped != num || restarting+running != num {
 		t.Error("has children status failed")
 	}
 }

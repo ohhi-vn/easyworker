@@ -62,6 +62,8 @@ type Child struct {
 	fun    any
 	params []any
 	ctx    context.Context
+
+	result []any
 }
 
 /*
@@ -131,7 +133,7 @@ func (c *Child) run_task() {
 l:
 	for {
 		// call user define function.
-		_, err = invokeFun(c.fun, c.params...)
+		c.result, err = invokeFun(c.fun, c.params...)
 
 		if err != nil {
 			c.incFailed()
@@ -200,4 +202,14 @@ func (c *Child) GetStats() (status int64, restarted int64, failed int64) {
 	failed = c.getFailed()
 
 	return
+}
+
+/*
+Get result from last run.
+Result is slice of any.
+Length of slice is number of parameter return from user function.
+Cast type to get right value.
+*/
+func (c *Child) GetResult() []any {
+	return c.result
 }

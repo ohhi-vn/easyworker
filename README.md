@@ -68,6 +68,7 @@ Currently, child has three type of restart strategy:
 * NO_RESTART, supervisor will don't restart children for any reason.
 
 Children will be started after they are added to supervisor.
+Chid can be added many times to many supervisor but child can control only by the last supervior.
 
 In restart case, children will re-use last parameters (if task don't change it) of task.
 
@@ -118,11 +119,12 @@ sup := easyworker.NewSupervisor()
 
 // add direct child to supervisor.
 sup.NewChild(easyworker.ERROR_RESTART, loop, 5)
-sup.NewChild(easyworker.NO_RESTART, loopWithPanic, 5, "test panic")
-
+sup.NewChild(easyworker.NO_RESTART, func() {
+  fmt.Println("Hello")
+})
 
 // create a child.
-child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, loopWithPanic, 5, "other panic")
+child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, loopWithPanic, 5, "test panic")
 
 // add exists child.
 sup.AddChild(&child)
@@ -170,8 +172,6 @@ sup := NewSupervisorWithContext(context.Background())
 // add child.
 sup.NewChild(easyworker.NO_RESTART, loopWithContext, 10)
 ```
-
-For other APIs please go to [pkg.go](https://pkg.go.dev/github.com/manhvu/easyworker)
 
 ### EasyTask
 
@@ -352,3 +352,5 @@ if sig.Signal != easyWorker.SIGNAL_DONE {
  g.Run()
 }
 ```
+
+For other APIs please go to [pkg.go](https://pkg.go.dev/github.com/manhvu/easyworker)
