@@ -6,6 +6,22 @@ import (
 	"time"
 )
 
+func TestGoNotAFunc(t *testing.T) {
+	_, err := NewGo("hello")
+
+	if err == nil {
+		t.Error("cannot cat incorrect func, ", err)
+	}
+}
+
+func TestGoNotAFunc2(t *testing.T) {
+	_, err := NewGoAndRun("hello")
+
+	if err == nil {
+		t.Error("cannot cat incorrect func, ", err)
+	}
+}
+
 func TestGoRunNoArg(t *testing.T) {
 	g, err := NewGo(simpleLoopNoArg)
 
@@ -98,6 +114,38 @@ func TestGoRun3(t *testing.T) {
 			t.Error("timed out")
 			return
 		}
+	}
+}
+
+func TestGoNewAndRun(t *testing.T) {
+	g, err := NewGoAndRun(loopRun2, 5)
+
+	if err != nil {
+		t.Error("create go failed, ", err)
+		return
+	}
+
+	time.Sleep(time.Second)
+
+	r := g.GetResult()
+	if r[0].(int) != 10 {
+		t.Error("incorrect result")
+	}
+}
+
+func TestGoRunAndWait(t *testing.T) {
+	g, err := NewGo(loopRun2, 5)
+
+	if err != nil {
+		t.Error("create go failed, ", err)
+		return
+	}
+
+	g.RunAndWait()
+
+	r := g.GetResult()
+	if r[0].(int) != 10 {
+		t.Error("incorrect result")
 	}
 }
 
@@ -262,6 +310,75 @@ func TestGoMassMonitor2(t *testing.T) {
 		case <-time.After(5 * time.Second):
 			t.Error("timed out")
 			return
+		}
+	}
+}
+
+func TestGoStop(t *testing.T) {
+	g, err := NewGo(loopRun2, 5)
+
+	if err != nil {
+		t.Error("create go failed, ", err)
+		return
+	}
+
+	refId, ch := g.Monitor()
+
+	g.Run()
+
+	select {
+	case sig := <-ch:
+		if refId != sig.RefId || SIGNAL_DONE != sig.Signal {
+			t.Error("return signal incorrect")
+			return
+		}
+	case <-time.After(time.Second):
+		t.Error("timed out")
+		return
+	}
+
+	g.Stop()
+
+	if g.GetResult() != nil {
+		t.Error("not reset result")
+		return
+	}
+
+	ok, _ := g.RunAndWait()
+	if ok {
+		t.Error("expect to cannot re-run ")
+	}
+}
+
+func TestGoRerun(t *testing.T) {
+	g, err := NewGo(loopRun2, 5)
+
+	if err != nil {
+		t.Error("create go failed, ", err)
+		return
+	}
+
+	refId, ch := g.Monitor()
+
+	g.Run()
+
+	select {
+	case sig := <-ch:
+		if refId != sig.RefId || SIGNAL_DONE != sig.Signal {
+			t.Error("return signal incorrect")
+			return
+		}
+	case <-time.After(time.Second):
+		t.Error("timed out")
+		return
+	}
+
+	ok, err := g.RunAndWait()
+	if !ok {
+		t.Error("expect to can re-run ", err)
+	} else {
+		if g.GetResult()[0] != 10 {
+			t.Error("incorrect result")
 		}
 	}
 }

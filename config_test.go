@@ -53,8 +53,15 @@ func TestIncorrectNumWorker(t *testing.T) {
 }
 
 func TestIncorrectNumRetry(t *testing.T) {
-	_, err := NewConfig(add, 0, -1, 0)
+	_, err := NewConfig(add, 1, -1, 0)
 	if err == nil {
 		t.Error("incorrect number of retry is passed, ", err)
+	}
+}
+
+func TestIncorrectRetryTime(t *testing.T) {
+	_, err := NewConfig(add, 1, 1, -1)
+	if err == nil {
+		t.Error("incorrect retry time is passed, ", err)
 	}
 }

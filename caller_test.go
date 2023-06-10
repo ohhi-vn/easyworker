@@ -33,6 +33,30 @@ func TestInvokeNoArg(t *testing.T) {
 	}
 }
 
+func TestInvokeIncorrectNumArg(t *testing.T) {
+	_, err := invokeFun(simpleLoopWithPanic, 3, 3)
+
+	if err == nil {
+		t.Error("test invoke with incorrect argument failed")
+	}
+}
+
+func TestInvokeIncorrectNumArg2(t *testing.T) {
+	_, err := invokeFun(simpleLoopWithPanic)
+
+	if err == nil {
+		t.Error("test invoke with incorrect argument failed")
+	}
+}
+
+func TestInvokeIncorrectNumArg3(t *testing.T) {
+	_, err := invokeFun(simpleLoopWithPanic, "a")
+
+	if err == nil {
+		t.Error("test invoke with incorrect argument failed")
+	}
+}
+
 func TestInvokePanic(t *testing.T) {
 	_, err := invokeFun(simpleLoopWithPanic, 5)
 

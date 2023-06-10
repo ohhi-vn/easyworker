@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
-func simpleLoop(a int) {
+func simpleLoop(a int) (ret int) {
 	for i := 0; i < a; i++ {
+		ret += i
 		time.Sleep(time.Millisecond)
 	}
+	return
 }
 
 func simpleLoopNoArg() {
@@ -71,7 +73,7 @@ func TestSupAlwaysRestart1(t *testing.T) {
 
 	child, _ := NewChild(ALWAYS_RESTART, loopRun, 15, ch)
 
-	sup.AddChild(&child)
+	sup.AddChild(child)
 
 	counter := 0
 l:
@@ -96,7 +98,7 @@ func TestSupAlwaysRestart2(t *testing.T) {
 
 	child, _ := NewChild(ALWAYS_RESTART, loopRunWithPanic, 5, ch)
 
-	sup.AddChild(&child)
+	sup.AddChild(child)
 
 	counter := 0
 l:
@@ -120,7 +122,7 @@ func TestSupNormalRestart1(t *testing.T) {
 
 	child, _ := NewChild(ERROR_RESTART, loopRun, 5, ch)
 
-	sup.AddChild(&child)
+	sup.AddChild(child)
 
 	counter := 0
 l:
@@ -144,7 +146,7 @@ func TestSupNormalRestart2(t *testing.T) {
 
 	child, _ := NewChild(ERROR_RESTART, loopRunWithPanic, 5, ch)
 
-	sup.AddChild(&child)
+	sup.AddChild(child)
 
 	counter := 0
 l:
@@ -176,6 +178,23 @@ func TestSupNoRestart(t *testing.T) {
 	}
 
 	sup.Stop()
+}
+
+func TestSupGetResult(t *testing.T) {
+	sup := NewSupervisor()
+
+	id, _ := sup.NewChild(NO_RESTART, simpleLoop, 5)
+
+	time.Sleep(time.Millisecond * 100)
+
+	sup.Stop()
+
+	child := sup.GetChild(id)
+
+	if child.GetResult()[0] != 10 {
+		t.Error("stop supervisor failed")
+	}
+
 }
 
 func TestSupFunNoArg(t *testing.T) {
@@ -285,4 +304,14 @@ func TestSupContext(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	sup.Stop()
+}
+
+func TestSupContext2(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic")
+		}
+	}()
+
+	NewSupervisorWithContext(nil)
 }

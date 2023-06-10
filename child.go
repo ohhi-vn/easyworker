@@ -22,8 +22,11 @@ const (
 	iCHILD_PANIC = iota
 	iCHILD_TASK_DONE
 
+	// Child is standby
+	STANDBY = iota
+
 	// Child is running task.
-	RUNNING = iota
+	RUNNING
 
 	// Child is restarting.
 	RESTARTING
@@ -33,9 +36,6 @@ const (
 
 	// Child is force to quit. In this state child wait for finish task before quit.
 	FORCE_QUIT
-
-	// Child is standby
-	STANDBY
 )
 
 var (
@@ -69,7 +69,7 @@ type Child struct {
 /*
 Create new child.
 */
-func NewChild(restart int, fun any, params ...any) (ret Child, retErr error) {
+func NewChild(restart int, fun any, params ...any) (ret *Child, retErr error) {
 	if restart < ALWAYS_RESTART || restart > NO_RESTART {
 		retErr = fmt.Errorf("in correct restart type, input: %d", restart)
 		return
@@ -81,12 +81,15 @@ func NewChild(restart int, fun any, params ...any) (ret Child, retErr error) {
 
 	childId := getNewChildId()
 
-	return Child{
+	ret = &Child{
 		id:           childId,
 		restart_type: restart,
 		fun:          fun,
 		params:       params,
-	}, nil
+	}
+	ret.state.Store(STANDBY)
+
+	return ret, nil
 }
 
 /*
@@ -196,8 +199,8 @@ func (c *Child) getFailed() int64 {
 /*
 Return current status & statistic of Child.
 */
-func (c *Child) GetStats() (status int64, restarted int64, failed int64) {
-	status = c.getState()
+func (c *Child) GetStats() (state int64, restarted int64, failed int64) {
+	state = c.getState()
 	restarted = c.getRestarted()
 	failed = c.getFailed()
 
@@ -208,7 +211,7 @@ func (c *Child) GetStats() (status int64, restarted int64, failed int64) {
 Get result from last run.
 Result is slice of any.
 Length of slice is number of parameter return from user function.
-Cast type to get right value.
+Cast to right type for value.
 */
 func (c *Child) GetResult() []any {
 	return c.result

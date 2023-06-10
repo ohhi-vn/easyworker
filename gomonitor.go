@@ -162,6 +162,7 @@ func (g *Go) Stop() {
 		delete(g.panicListeners, refId)
 	}
 
+	g.result = nil
 	g.state.Store(STOPPED)
 }
 
