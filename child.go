@@ -33,6 +33,9 @@ const (
 
 	// Child is force to quit. In this state child wait for finish task before quit.
 	FORCE_QUIT
+
+	// Child is standby
+	STANDBY
 )
 
 var (
@@ -52,7 +55,7 @@ type Child struct {
 	restart_type int
 	cmdCh        chan msg
 
-	status    atomic.Int64
+	state     atomic.Int64
 	restarted atomic.Int64
 	failed    atomic.Int64
 
@@ -115,7 +118,7 @@ func (c *Child) run_task() {
 			msg.data = r
 			c.incFailed()
 		} else {
-			c.updateStatus(STOPPED)
+			c.updateState(STOPPED)
 		}
 
 		c.cmdCh <- msg
@@ -123,7 +126,7 @@ func (c *Child) run_task() {
 
 	var err error
 
-	c.updateStatus(RUNNING)
+	c.updateState(RUNNING)
 
 l:
 	for {
@@ -156,20 +159,20 @@ l:
 
 func (c *Child) stop() {
 	log.Println(c.id, "force stop")
-	c.updateStatus(FORCE_QUIT)
+	c.updateState(FORCE_QUIT)
 }
 
-func (c *Child) updateStatus(newStatus int) {
-	c.status.Store(int64(newStatus))
+func (c *Child) updateState(newStatus int) {
+	c.state.Store(int64(newStatus))
 }
 
 func (c *Child) getState() int64 {
-	return c.status.Load()
+	return c.state.Load()
 }
 
 func (c *Child) canRun() bool {
 
-	return int(c.status.Load()) != FORCE_QUIT
+	return int(c.state.Load()) != FORCE_QUIT
 }
 
 func (c *Child) incRestarted() {

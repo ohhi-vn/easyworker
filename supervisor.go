@@ -152,12 +152,12 @@ func (s *Supervisor) start() {
 			case iCHILD_PANIC:
 				child = s.children[int64(event.id)]
 				if child.canRun() && (child.restart_type == ALWAYS_RESTART || child.restart_type == ERROR_RESTART) {
-					child.updateStatus(RESTARTING)
+					child.updateState(RESTARTING)
 					log.Println("restarting child:", child.id)
 					child.run()
 				} else {
 					log.Println("child:", child.id, "stopped")
-					child.updateStatus(STOPPED)
+					child.updateState(STOPPED)
 				}
 
 			}

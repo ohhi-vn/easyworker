@@ -11,9 +11,11 @@ const (
 	// call user function success.
 	SIGNAL_DONE = iota
 
-	// call user function failed
+	// call user function failed/panic
 	SIGNAL_FAILED
 )
+
+const ()
 
 // Signal was sent when Goroutine is no longer run (done/failed/panic).
 type GoSignal struct {
@@ -24,18 +26,22 @@ type GoSignal struct {
 	Signal int
 }
 
+// channel for send signal.
 type monitorChan chan GoSignal
 
 // A struct wrap goroutine to handle panic and can re-run easily.
 type Go struct {
 	lock sync.Mutex
 
-	stopped        bool
+	state          atomic.Int64
 	id             int64
 	panicListeners map[int64]monitorChan
 
 	fun    any
 	params []any
+
+	// store result
+	result []any
 }
 
 var (
@@ -58,12 +64,15 @@ func NewGo(fun any, params ...any) (ret *Go, retErr error) {
 
 	id := getNewRefId()
 
-	return &Go{
+	ret = &Go{
 		id:             id,
 		fun:            fun,
 		params:         params,
 		panicListeners: make(map[int64]monitorChan),
-	}, nil
+	}
+	ret.state.Store(STANDBY)
+
+	return
 }
 
 /*
@@ -113,6 +122,23 @@ func (g *Go) Demonitor(refId int64) {
 	}
 }
 
+/*
+Run and wait for task done.
+Return true if task done in normally. False for failed. Error is cannot run task.
+*/
+func (g *Go) RunAndWait() (bool, error) {
+	_, ch := g.Monitor()
+
+	err := g.Run()
+	if err != nil {
+		return false, err
+	}
+
+	msg := <-ch
+
+	return msg.Signal == SIGNAL_DONE, nil
+}
+
 func (g *Go) pushSignal(msg GoSignal) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
@@ -136,7 +162,7 @@ func (g *Go) Stop() {
 		delete(g.panicListeners, refId)
 	}
 
-	g.stopped = true
+	g.state.Store(STOPPED)
 }
 
 /*
@@ -144,7 +170,7 @@ Start Go to process task.
 The function can call many.
 */
 func (g *Go) Run() error {
-	if g.stopped {
+	if g.state.Load() == STOPPED {
 		return errors.New("Go cannot run, it stopped")
 	}
 
@@ -153,6 +179,7 @@ func (g *Go) Run() error {
 }
 
 func (g *Go) run_task() {
+	g.state.Store(RUNNING)
 	msg := GoSignal{}
 	defer func() {
 		// catch if panic by child code.
@@ -162,17 +189,49 @@ func (g *Go) run_task() {
 		}
 
 		g.pushSignal(msg)
+		g.state.Store(STANDBY)
 	}()
 
-	var err error
+	var (
+		err    error
+		result []any
+	)
 
 	//log.Println("Go run, params:", g.params)
 
 	// call user define function.
-	_, err = invokeFun(g.fun, g.params...)
+	result, err = invokeFun(g.fun, g.params...)
+
+	g.lock.Lock()
+	g.result = result
+	g.lock.Unlock()
 
 	if err != nil {
 		msg.Signal = SIGNAL_FAILED
 		log.Println(g.id, "goroutine call user function failed, reason:", err)
 	}
+}
+
+/*
+Return state of Go.
+Kind of state:
+  - RUNNING: Task is running.
+  - STOPPED: Stop by user. In this state user can run again.
+  - STANDBY: Task is standby wait for start or just done task.
+*/
+func (g *Go) State() int64 {
+	return g.state.Load()
+}
+
+/*
+Get result from last run.
+Result is slice of any.
+Length of slice is number of parameter return from user function.
+Cast type to get right value.
+*/
+func (g *Go) GetResult() []any {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	return g.result
 }
