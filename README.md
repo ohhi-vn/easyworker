@@ -127,7 +127,7 @@ sup.NewChild(easyworker.NO_RESTART, func() {
 child, _ := easyworker.NewChild(easyworker.ALWAYS_RESTART, loopWithPanic, 5, "test panic")
 
 // add exists child.
-sup.AddChild(&child)
+sup.AddChild(child)
 
 // or do something you want.
 time.Sleep(15 * time.Second)
