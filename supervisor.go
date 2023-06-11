@@ -9,10 +9,10 @@ import (
 type key int
 
 const (
-	// Use to get supervisor id from context.
+	// Use to get supervisor id from context in user function.
 	CTX_SUP_ID key = iota
 
-	// Use to get child id from context.
+	// Use to get child id from context in user function.
 	CTX_CHILD_ID
 )
 
@@ -134,6 +134,20 @@ func (s *Supervisor) AddChild(child *Child) {
 }
 
 /*
+Remove a child to out of supervisor.
+*/
+func (s *Supervisor) RemoveChild(child *Child) {
+	delete(s.children, child.id)
+}
+
+/*
+Remove a child to out of supervisor by child id.
+*/
+func (s *Supervisor) RemoveChildById(id int64) {
+	delete(s.children, id)
+}
+
+/*
 Get child from id.
 Return nil if id isn't existed.
 */
@@ -157,10 +171,14 @@ func (s *Supervisor) start() {
 				child = s.children[int64(event.id)]
 				if child.canRun() && (child.restart_type == ALWAYS_RESTART || child.restart_type == ERROR_RESTART) {
 					child.updateState(RESTARTING)
-					log.Println("restarting child:", child.id)
+					if printLog {
+						log.Println("restarting child:", child.id)
+					}
 					child.run()
 				} else {
-					log.Println("child:", child.id, "stopped")
+					if printLog {
+						log.Println("child:", child.id, "stopped")
+					}
 					child.updateState(STOPPED)
 				}
 

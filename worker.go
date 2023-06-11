@@ -57,7 +57,9 @@ after task done, worker will send result back to supervisor with id of task.
 func (w *worker) run() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println(w.id, ", worker was panic, ", r)
+			if printLog {
+				log.Println(w.id, ", worker was panic, ", r)
+			}
 			w.resultCh <- msg{id: int(w.id), msgType: iFATAL_ERROR, data: r}
 		}
 	}()
@@ -74,12 +76,12 @@ func (w *worker) run() {
 		case cmd := <-w.cmd:
 			// receive a quit signal.
 			if cmd.msgType == iQUIT {
-				log.Println(w.id, "is exited")
+				if printLog {
+					log.Println(w.id, "is exited")
+				}
 				return
 			}
 		}
-
-		log.Println(w.id, ", received new task, ", task, "data:", task.data)
 
 		switch task.msgType {
 		case iTASK:
@@ -88,7 +90,9 @@ func (w *worker) run() {
 			for i := 0; i <= w.retryTimes; i++ {
 				if i > 0 {
 					time.Sleep(time.Millisecond * time.Duration(w.retrySleep))
-					log.Println(w.id, ", retry(", i, ") function with last args")
+					if printLog {
+						log.Println(w.id, ", retry(", i, ") function with last args")
+					}
 				}
 				ret, err = invokeFun(w.fun, args...)
 				if err == nil {
@@ -97,10 +101,11 @@ func (w *worker) run() {
 			}
 
 			if err != nil {
-				log.Println(w.id, ", call function failed, error: ", err)
+				if printLog {
+					log.Println(w.id, ", call function failed, error: ", err)
+				}
 				w.resultCh <- msg{id: task.id, msgType: iERROR, data: err}
 			} else {
-				log.Println(w.id, ", function return ", ret)
 				w.resultCh <- msg{id: task.id, msgType: iSUCCESS, data: ret}
 			}
 		}

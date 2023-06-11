@@ -186,7 +186,9 @@ func (g *Go) run_task() {
 		// catch if panic by child code.
 		if r := recover(); r != nil {
 			msg.Signal = SIGNAL_FAILED
-			log.Println(g.id, ", goroutine was panic, ", r)
+			if printLog {
+				log.Println(g.id, ", goroutine was panic, ", r)
+			}
 		}
 
 		g.pushSignal(msg)
@@ -209,7 +211,9 @@ func (g *Go) run_task() {
 
 	if err != nil {
 		msg.Signal = SIGNAL_FAILED
-		log.Println(g.id, "goroutine call user function failed, reason:", err)
+		if printLog {
+			log.Println(g.id, "goroutine call user function failed, reason:", err)
+		}
 	}
 }
 

@@ -41,6 +41,8 @@ const (
 var (
 	// use to store last id of child. id is auto_increment.
 	lastChildId atomic.Int64
+
+	printLog bool
 )
 
 func getNewChildId() int64 {
@@ -118,7 +120,9 @@ func (c *Child) run_task() {
 
 		// catch if panic by child code.
 		if r := recover(); r != nil {
-			log.Println(c.id, ", worker was panic, ", r)
+			if printLog {
+				log.Println(c.id, ", worker was panic, ", r)
+			}
 			msg.msgType = iCHILD_PANIC
 			msg.data = r
 			c.incFailed()
@@ -140,7 +144,9 @@ l:
 
 		if err != nil {
 			c.incFailed()
-			log.Println(c.id, "call user function failed, reason:", err)
+			if printLog {
+				log.Println(c.id, "call user function failed, reason:", err)
+			}
 		}
 
 		switch c.restart_type {
@@ -150,7 +156,9 @@ l:
 			}
 		case ERROR_RESTART:
 			if err == nil || c.getState() == FORCE_QUIT {
-				log.Println(c.id, "done, child no re-run")
+				if printLog {
+					log.Println(c.id, "done, child no re-run")
+				}
 				break l
 			}
 		case NO_RESTART:
@@ -163,7 +171,9 @@ l:
 }
 
 func (c *Child) stop() {
-	log.Println(c.id, "force stop")
+	if printLog {
+		log.Println(c.id, "force stop")
+	}
 	c.updateState(FORCE_QUIT)
 }
 

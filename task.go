@@ -70,9 +70,6 @@ Example:
 func (p *EasyTask) Run() (ret []any, retErr error) {
 	ret = make([]any, 0)
 
-	log.Println("len:", len(p.inputs))
-	log.Println("inputs: ", p.inputs)
-
 	if len(p.inputs) < 1 {
 		retErr = errors.New("need params to run")
 		return
@@ -96,14 +93,12 @@ func (p *EasyTask) Run() (ret []any, retErr error) {
 		}
 		p.workerList[i] = opt
 
-		log.Println("start worker", i)
 		go opt.run()
 	}
 
 	// Send data to worker
 	go func() {
 		for index, params := range p.inputs {
-			log.Println("send params: ", params)
 			inputCh <- msg{id: index, msgType: iTASK, data: params}
 		}
 	}()
@@ -115,19 +110,23 @@ func (p *EasyTask) Run() (ret []any, retErr error) {
 		result := <-resultCh
 		switch result.msgType {
 		case iSUCCESS: // task done
-			log.Println("task", result.id, " is done, result:", result.data)
 			resultMap[result.id] = result.data
 		case iERROR: // task failed
-			log.Println("task", result.id, " is failed, error:", result.data)
+			if printLog {
+				log.Println("task", result.id, " is failed, error:", result.data)
+			}
 			resultMap[result.id] = result.data
 		case iFATAL_ERROR: // worker panic
-			log.Println(result.id, "worker is fatal error")
-		case iQUIT: // worker quited
-			log.Println(result.id, " exited")
+			if printLog {
+				log.Println(result.id, "worker is fatal error")
+			}
+		case iQUIT: // worker quited\
+			if printLog {
+				log.Println(result.id, " exited")
+			}
 		}
 
 		if len(resultMap) == len(p.inputs) {
-			log.Println("collect all result, ", resultMap)
 			break
 		}
 	}

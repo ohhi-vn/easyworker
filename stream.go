@@ -83,7 +83,6 @@ func (p *EasyStream) Run() (retErr error) {
 		}
 		p.workerList[i] = opt
 
-		log.Println("stream start worker", i)
 		go opt.run()
 	}
 
@@ -91,7 +90,9 @@ func (p *EasyStream) Run() (retErr error) {
 	go func() {
 		for {
 			params := <-p.inputCh
-			log.Println("stream received new params: ", params)
+			if printLog {
+				log.Println("stream received new params: ", params)
+			}
 			inputCh <- msg{id: iSTREAM, msgType: iTASK, data: params}
 		}
 	}()
@@ -102,15 +103,20 @@ func (p *EasyStream) Run() (retErr error) {
 			result := <-resultCh
 			switch result.msgType {
 			case iSUCCESS: // task done
-				log.Println("stream task", result.id, " is done, result:", result.data)
 				p.outputCh <- result.data
 			case iERROR: // task failed
-				log.Println("stream task", result.id, " is failed, error:", result.data)
+				if printLog {
+					log.Println("stream task", result.id, " is failed, error:", result.data)
+				}
 				p.outputCh <- result.data
 			case iFATAL_ERROR: // worker panic
-				log.Println(result.id, "worker (stream) is fatal error")
+				if printLog {
+					log.Println(result.id, "worker (stream) is fatal error")
+				}
 			case iQUIT: // worker quited
-				log.Println(result.id, " exited (stream)")
+				if printLog {
+					log.Println(result.id, " exited (stream)")
+				}
 			}
 		}
 	}()

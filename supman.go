@@ -48,6 +48,12 @@ func (sm *supervisorMan) remove(id int64) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
+	if sup, existed := sm.listSup[id]; existed {
+		for k := range sup.children {
+			delete(sup.children, k)
+		}
+	}
+
 	delete(sm.listSup, id)
 }
 

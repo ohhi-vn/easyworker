@@ -13,7 +13,9 @@ func invokeFun(fun any, args ...any) (ret []any, err error) {
 	// catch if panic by user code.
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("user function was panic, ", r)
+			if printLog {
+				log.Println("user function was panic, ", r)
+			}
 			err = fmt.Errorf("user function was panic, %s", r)
 		}
 	}()

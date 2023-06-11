@@ -68,3 +68,12 @@ func NewConfig(fun any, numWorkers int, retryTimes int, retrySleep int) (ret Con
 
 	return
 }
+
+/*
+Turn on/off print log to logger.
+enable = true, print log.
+       = false, no print log.
+*/
+func EnableLog(enable bool) {
+	printLog = enable
+}
