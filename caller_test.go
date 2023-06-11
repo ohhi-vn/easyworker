@@ -2,6 +2,7 @@ package easyworker
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"testing"
 )
@@ -43,7 +44,7 @@ func TestInvokeIncorrectNumArg(t *testing.T) {
 
 func TestInvokeIncorrectNumArg2(t *testing.T) {
 	_, err := invokeFun(simpleLoopWithPanic)
-
+	fmt.Println(err)
 	if err == nil {
 		t.Error("test invoke with incorrect argument failed")
 	}
@@ -58,6 +59,17 @@ func TestInvokeIncorrectNumArg3(t *testing.T) {
 }
 
 func TestInvokePanic(t *testing.T) {
+	_, err := invokeFun(simpleLoopWithPanic, 5)
+
+	if err == nil {
+		t.Error("expected error but no return error.")
+	} else {
+		log.Println("expected is ok, err: ", err)
+	}
+}
+
+func TestInvokePanic2(t *testing.T) {
+	printLog = true
 	_, err := invokeFun(simpleLoopWithPanic, 5)
 
 	if err == nil {

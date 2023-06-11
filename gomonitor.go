@@ -187,7 +187,7 @@ func (g *Go) run_task() {
 		if r := recover(); r != nil {
 			msg.Signal = SIGNAL_FAILED
 			if printLog {
-				log.Println(g.id, ", goroutine was panic, ", r)
+				log.Println(g.id, ", Go was panic, ", r)
 			}
 		}
 
@@ -212,7 +212,7 @@ func (g *Go) run_task() {
 	if err != nil {
 		msg.Signal = SIGNAL_FAILED
 		if printLog {
-			log.Println(g.id, "goroutine call user function failed, reason:", err)
+			log.Println(g.id, "Go call user function failed, reason:", err)
 		}
 	}
 }

@@ -137,14 +137,27 @@ func (s *Supervisor) AddChild(child *Child) {
 Remove a child to out of supervisor.
 */
 func (s *Supervisor) RemoveChild(child *Child) {
-	delete(s.children, child.id)
+	if child != nil {
+		if child.getState() == RUNNING {
+			child.stop()
+		}
+
+		delete(s.children, child.id)
+	}
+
 }
 
 /*
 Remove a child to out of supervisor by child id.
 */
 func (s *Supervisor) RemoveChildById(id int64) {
-	delete(s.children, id)
+	if child, existed := s.children[id]; existed {
+		if child.getState() == RUNNING {
+			child.stop()
+		}
+
+		delete(s.children, child.id)
+	}
 }
 
 /*

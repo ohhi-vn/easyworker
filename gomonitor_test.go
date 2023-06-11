@@ -339,6 +339,10 @@ func TestGoStop(t *testing.T) {
 
 	g.Stop()
 
+	if g.State() != STOPPED {
+		t.Error("wrong state")
+	}
+
 	if g.GetResult() != nil {
 		t.Error("not reset result")
 		return

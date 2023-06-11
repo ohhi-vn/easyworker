@@ -4,9 +4,9 @@
 
 A Golang package for supporting worker supervisor model.
 The package help developer easy to run parallel tasks.
-It's scalable with minimum effort.
+It's scalable with minimal effort.
 
-easyworker package is inspired by Erlang OTP.
+easyworker is inspired by Erlang OTP.
 
 # Design
 
@@ -19,7 +19,7 @@ The package has two main part:
 
 Start workers and monitor workers.
 Send task to workers and get result(for task & stream).
-Restart children if they're failed (depends restart strategy).
+Restart(depends restart strategy) children if they're failed to call user function or panic.
 Supervisor has one goroutine for send & manage signal to children.
 
 ## Child
@@ -32,7 +32,7 @@ Each child has a goroutine to run its task.
 
 easyworker support 3 type of workers:
 
-* Supervisor, Start a supervisor for managing custom workers. Workers can run many type of tasks.
+* Supervisor, Start a supervisor for managing children. Children can run many type of tasks.
 * Task, Add a list of task and run workers. Workers run same type of task.
 * Stream, Start workers then push tasks to workers from channel. Workers run same type of task.
 
@@ -63,8 +63,8 @@ Every children has a owner restart strategy.
 
 Currently, child has three type of restart strategy:
 
-* ALWAYS_RESTART, supervisor always restart children if it panic/done.
-* ERROR_RESTART, supervisor will restart if children was panic.
+* ALWAYS_RESTART, supervisor always restart children if it panic or done task.
+* ERROR_RESTART, supervisor will only restart if children was panic.
 * NO_RESTART, supervisor will don't restart children for any reason.
 
 Children will be started after they are added to supervisor.
@@ -250,14 +250,16 @@ fnStr := func(a int, suffix string) string {
  return fmt.Sprintf("%d_%s", a, suffix)
 }
 
+num := easyworker.DefaultNumWorkers()
+
 // input channel.
-inCh := make(chan []any)
+inCh := make(chan []any, num)
 
 // result channel.
-outCh := make(chan any)
+outCh := make(chan any, num)
 
 // number of workers = number of cpu cores (logical cores).
-config, _ := easyworker.NewConfig(fnStr, easyworker.DefaultNumWorkers(), 3, 1000)
+config, _ := easyworker.NewConfig(fnStr, num, 3, 1000)
 
 // test with stream.
 myStream, _ := easyworker.NewStream(config, inCh, outCh)
@@ -291,7 +293,7 @@ myStream.Stop()
 
 ### Monitor Go
 
-A wrapper for goroutine for easy monitor when goroutine was panic or run task done.
+A wrapper for goroutine for easy to monitor when goroutine was panic or run task done.
 
 `Monitor` function will return two params.
 First param is unique reference id.
@@ -299,7 +301,7 @@ Second param is channel that user can receive signal.
 
 Signal is a struct with reference id and kind of end (failed, done).
 
-Go doesn't support return value, you need an other way to get if you neened.
+If you need get result from last run, please call `GetResult`.
 
 Example 1:
 

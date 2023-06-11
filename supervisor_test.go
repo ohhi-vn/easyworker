@@ -213,6 +213,27 @@ func TestSupFunNoArg(t *testing.T) {
 	sup.Stop()
 }
 
+func TestSupRemoveChild(t *testing.T) {
+	sup := NewSupervisor()
+
+	id, _ := sup.NewChild(ALWAYS_RESTART, simpleLoopNoArg)
+	child, _ := NewChild(ALWAYS_RESTART, simpleLoopNoArg)
+	sup.AddChild(child)
+
+	time.Sleep(time.Millisecond)
+
+	sup.RemoveChildById(id)
+	sup.RemoveChild(child)
+
+	total, _, _, _ := sup.Stats()
+
+	if total != 0 {
+		t.Error("remove children failed")
+	}
+
+	sup.Stop()
+}
+
 func TestSupStop(t *testing.T) {
 	ch := make(chan int)
 
@@ -300,6 +321,10 @@ func TestSupContext(t *testing.T) {
 	sup := NewSupervisorWithContext(context.Background())
 
 	sup.NewChild(NO_RESTART, simpleLoopWithContext, 3)
+
+	child, _ := NewChild(ALWAYS_RESTART, simpleLoopWithContext, 3)
+
+	sup.AddChild(child)
 
 	time.Sleep(time.Millisecond * 100)
 

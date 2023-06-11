@@ -65,3 +65,11 @@ func TestIncorrectRetryTime(t *testing.T) {
 		t.Error("incorrect retry time is passed, ", err)
 	}
 }
+
+func TestPrintLog(t *testing.T) {
+	EnableLog(true)
+
+	if !printLog {
+		t.Error("Enable Log failed.")
+	}
+}
