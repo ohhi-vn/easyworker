@@ -209,7 +209,7 @@ func parallelTasks() {
  config, _ := easyworker.NewConfig(sum, numWorkers, retryTimes, retrySleep)
 
  // new EasyTask.
- task, _ := easyworker.NewTask(config)
+ myTask, _ := easyworker.NewTask(config)
 
  // add tasks.
  myTask.AddTask(1, 2, 3)
@@ -220,7 +220,7 @@ func parallelTasks() {
  r, e := myTask.Run()
 
  if e != nil {
-  t.Error("run task failed, ", e)
+  fmt.Println("run task failed, ", e)
  } else {
   fmt.Println("task result:", r)
  }
@@ -243,7 +243,7 @@ EasyStream example:
 
 ```go
 // fun will do task
-fnStr = func(a int, suffix string) string {
+fnStr := func(a int, suffix string) string {
  if a%3 == 0 {
   panic("panic from user func")
  }
@@ -257,7 +257,7 @@ inCh := make(chan []any)
 outCh := make(chan any)
 
 // number of workers = number of cpu cores (logical cores).
-config, _ := easyworker.NewConfig(fnStr, easyworker.DefaultNumWorker(), 3, 1000)
+config, _ := easyworker.NewConfig(fnStr, easyworker.DefaultNumWorkers(), 3, 1000)
 
 // test with stream.
 myStream, _ := easyworker.NewStream(config, inCh, outCh)
@@ -333,7 +333,7 @@ Example 2:
 
 ```go
 // create go task.
-g,_ := easyworker.NewGo(loopRun, 5)
+g,_ := easyworker.NewGo(loop, 5)
 
 // get a monitor to g.
 _, ch := g.Monitor()
