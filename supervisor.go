@@ -64,6 +64,10 @@ func NewSupervisorWithContext(ctx context.Context) (ret Supervisor) {
 	return
 }
 
+func (s *Supervisor) GetId() int64 {
+	return s.id
+}
+
 /*
 Add directly child to a supervisor.
 */

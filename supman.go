@@ -30,10 +30,17 @@ func GetSupervisor(id int64) *Supervisor {
 }
 
 /*
+Remove supervisor.
+*/
+func RemoveSupervisor(sup *Supervisor) {
+	listSup.remove(sup.id)
+}
+
+/*
 Remove supervisor by id.
 User need stop before remove.
 */
-func RemoveSupervisor(id int64) {
+func RemoveSupervisorById(id int64) {
 	listSup.remove(id)
 }
 

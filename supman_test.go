@@ -24,7 +24,7 @@ func TestSupManRemove(t *testing.T) {
 
 	sup.Stop()
 
-	RemoveSupervisor(sup.id)
+	RemoveSupervisorById(sup.id)
 
 	if GetSupervisor(sup.id) != nil {
 		t.Error("cannot get supervisor by id")
