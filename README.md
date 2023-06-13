@@ -152,6 +152,14 @@ time.Sleep(15 * time.Second)
 // this function depends how long fun return.
 sup.Stop()
 
+result := child.GetResult()
+switch v := result.(type) {
+case error:
+  log.Println(i, "task failed, reason:", v)
+case []any:
+  fmt.Println("task", i, "result:", v)
+}
+
 // clear all children in supervisor to avoid memory leak.
 sup.Done()
 ```
@@ -236,12 +244,19 @@ func parallelTasks() {
  myTask.AddTask(11, 22)
 
  // start workers and get results.
- r, e := myTask.Run()
+ taskResults, e := myTask.Run()
 
  if e != nil {
   fmt.Println("run task failed, ", e)
  } else {
-  fmt.Println("task result:", r)
+  for i, result := range taskResults { 
+    switch v := result.(type) {
+    case error:
+      log.Println(i, "task failed, reason:", v)
+    case []any:
+      fmt.Println("task", i, "result:", v)
+   }
+  }
  }
 }
 ```
@@ -289,8 +304,14 @@ myStream.Run()
 // receive data from stream.
 go func() {
   for {
-    r := <-outCh
-    fmt.Println("stream result: ", r)
+    result := <-outCh
+    
+    switch v := result.(type) {
+    case error:
+      log.Println(i, "task failed, reason:", v)
+    case []any:
+      fmt.Println("task", i, "result:", v)
+    }
   }
 }()
 
