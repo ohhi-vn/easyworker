@@ -75,6 +75,8 @@ In restart case, children will re-use last parameters (if task don't change it) 
 Child, doesn't return any value from task.
 You need add code to get value from task if you needed.
 
+After use the supervisor done, you need to remove by `RemoveSupervisor` or `RemoveSupervisorById` to avoid leak memory.
+
 Supervisor -> Child -> call user functions
 
 Basic supervisor's flow:
@@ -135,6 +137,9 @@ time.Sleep(15 * time.Second)
 // stop all worker.
 // this function depends how long fun return.
 sup.Stop()
+
+// clear all children in supervisor to avoid memory leak.
+sup.Done()
 ```
 
 Supervisor support context by create supervisor by function `NewSupervisorWithContext`.

@@ -227,6 +227,15 @@ func (s *Supervisor) StopChild(id int64) {
 }
 
 /*
+Clear all children. Call after Stop.
+*/
+func (s *Supervisor) Done() {
+	for k := range s.children {
+		delete(s.children, k)
+	}
+}
+
+/*
 Return statistics of supervisor.
 total: Number of children in supervisor.
 running: Number of children are running.

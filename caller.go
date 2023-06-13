@@ -25,6 +25,7 @@ func invokeFun(fun any, args ...any) (ret []any, err error) {
 	fn := reflect.ValueOf(fun)
 	fnType := fn.Type()
 	numIn := fnType.NumIn()
+
 	if numIn > len(args) {
 		return nil, fmt.Errorf("function must have minimum %d params. Have %d", numIn, len(args))
 	}

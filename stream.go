@@ -127,8 +127,9 @@ func (p *EasyStream) Run() (retErr error) {
 			cmd := <-p.cmdCh
 			switch cmd {
 			case iQUIT:
-				for _, w := range p.workerList {
+				for i, w := range p.workerList {
 					w.cmd <- msg{msgType: iQUIT}
+					delete(p.workerList, i)
 				}
 			}
 		}
