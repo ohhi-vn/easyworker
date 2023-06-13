@@ -65,7 +65,7 @@ type Child struct {
 	params []any
 	ctx    context.Context
 
-	result []any
+	result any
 }
 
 /*
@@ -147,6 +147,7 @@ l:
 			if printLog {
 				log.Println(c.id, "call user function failed, reason:", err)
 			}
+			c.result = err
 		}
 
 		switch c.restart_type {
@@ -223,6 +224,6 @@ Result is slice of any.
 Length of slice is number of parameter return from user function.
 Cast to right type for value.
 */
-func (c *Child) GetResult() []any {
+func (c *Child) GetResult() any {
 	return c.result
 }

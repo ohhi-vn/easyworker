@@ -62,7 +62,7 @@ func invokeFun(fun any, args ...any) (ret []any, err error) {
 
 	//log.Println("invoke result:", result)
 
-	return ret, nil
+	return
 }
 
 /*

@@ -191,7 +191,7 @@ func TestSupGetResult(t *testing.T) {
 
 	child := sup.GetChild(id)
 
-	if child.GetResult()[0] != 10 {
+	if child.GetResult().([]any)[0] != 10 {
 		t.Error("stop supervisor failed")
 	}
 

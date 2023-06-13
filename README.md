@@ -36,6 +36,20 @@ easyworker support 3 type of workers:
 * Task, Add a list of task and run workers. Workers run same type of task.
 * Stream, Start workers then push tasks to workers from channel. Workers run same type of task.
 
+For get result from child/task/stream/monitor. Result is any please check if isn't an error before cast to []any for getting right result.
+
+```go
+ result := child1.GetResult()
+
+ switch v := result.(type) {
+  case error:
+     log.Println("last task failed, reason:", v)
+  case []any:
+      resultParam1 := v[0]
+      resultParam2 := v[1]
+ }
+```
+
 Package use standard log package, if you want log to file please set output for log package.
 
 (*required Go 1.19 or later.*)
@@ -72,7 +86,7 @@ Chid can be added many times to many supervisor but child can control only by th
 
 In restart case, children will re-use last parameters (if task don't change it) of task.
 
-Child, doesn't return any value from task.
+Child support hold result of last task user can get result by `GetResult`.
 You need add code to get value from task if you needed.
 
 After use the supervisor done, you need to remove by `RemoveSupervisor` or `RemoveSupervisorById` to avoid leak memory.
@@ -186,8 +200,8 @@ Number of workers is number of goroutine will run tasks.
 
 In retry case, worker will re-use last parameters of task.
 
-Result of each task is a []any.
-You need to get true value from any(interface{}).
+Result of each task is a []any or and an error.
+You need to check if is not an error before get true value from any(interface{}).
 
 EasyTask example:
 

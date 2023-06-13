@@ -206,7 +206,11 @@ func (g *Go) run_task() {
 	result, err = invokeFun(g.fun, g.params...)
 
 	g.lock.Lock()
-	g.result = result
+	if err != nil {
+		g.result = append(g.result, err)
+	} else {
+		g.result = result
+	}
 	g.lock.Unlock()
 
 	if err != nil {

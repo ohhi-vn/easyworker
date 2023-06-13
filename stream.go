@@ -108,6 +108,7 @@ func (p *EasyStream) Run() (retErr error) {
 				if printLog {
 					log.Println("stream task", result.id, " is failed, error:", result.data)
 				}
+				// send error to outside.
 				p.outputCh <- result.data
 			case iFATAL_ERROR: // worker panic
 				if printLog {
